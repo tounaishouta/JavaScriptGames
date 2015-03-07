@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>Pong!</title>
+<script type="text/javascript">
+
+var players;
+var pack;
+
+var canvas;
+var context;
+
+var mode;
+var disabled;
+var message;
+
+var touchState = new Object();
+
+var FPS = 50;
+var width = 3;
+var height = 2;
+var speed = function(num) { return .03 + num * .002; }
+
+onload = function() {
+  canvas = document.getElementById("canvas");
+  context = canvas.getContext("2d");
+  addEventListener("resize", draw);
+  addEventListener("keydown", keyEventHandler);
+  addEventListener("keyup", keyEventHandler);
+  addEventListener("touchstart", touchEventHandler);
+  addEventListener("touchmove", touchEventHandler);
+  addEventListener("touchend", touchEventHandler);
+  addEventListener("touchcancel", touchEventHandler);
+  begin();
+  return;
+};
+
+function begin() {
+  mode = "begin";
+  disabled = false;
+  players = new Object();
+  players.red = new Player("#FF0000", 0);
+  players.blue = new Player("#0000FF", width);
+  pack = false;
+  message = "New Game";
+  draw();
+  return;
+}
+
+function serve() {
+  mode = "serve";
+  pack = new Pack(players.red.score + players.blue.score);
+  message = "";
+  draw();
+  return;
+}
+
+function main() {
+  mode = "main";
+  disabled = false;
+  for (var color in players)
+    players[color].update();
+  pack.update(players);
+  message = "";
+  draw();
+  if (pack.disk.coord.x < pack.disk.radius) {
+    point("blue");
+    return;
+  }
+  else if (pack.disk.coord.x > width - pack.disk.radius) {
+    point("red");
+    return;
+  }
+  else {
+    setTimeout(main, 1000 / FPS);
+    return;
+  }
+}
+
+function point(color) {
+  mode = "point";
+  disabled = true;
+  setTimeout(function() { disabled = false; }, 1000);
+  players[color].score++;
+  message = players.red.score + " - " + players.blue.score;
+  draw();
+  return;
+}
+
+function tap() {
+  if (!disabled) {
+    switch (mode) {
+      case "begin": serve(); break;
+      case "serve": main(); break;
+      case "point": serve(); break;
+    }
+    disabled = true;
+    setTimeout(function() { disabled = false; }, 1000);
+  }
+  return;
+}
+
+function keyEventHandler(event) {
+  var keydown = event.type == "keydown";
+  if (keydown)
+    tap();
+  switch (event.keyCode) {
+    case 65: players.red.key.up = keydown; break;
+    case 90: players.red.key.down = keydown; break;
+    case 38: players.blue.key.up = keydown; break;
+    case 40: players.blue.key.down = keydown; break;
+  }
+  return;
+}
+
+function touchEventHandler(event) {
+  event.preventDefault();
+  for (var i in event.changedTouches) {
+    var t = event.changedTouches[i];
+    switch (event.type) {
+      case "touchstart":
+        var touch = new Object();
+        touch.x = t.clientX;
+        touch.y = t.clientY;
+        touchState[t.identifier] = touch;
+        tap();
+        break;
+      case "touchmove":
+        var touch = touchState[t.identifier];
+        touch.x = t.clientX;
+        touch.y = t.clientY;
+        break;
+      case "touchend":
+      case "touchcancel":
+        delete touchState[t.identifier];
+        break;
+    }
+  }
+  return;
+}
+
+function draw() {
+
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+
+  var scale = Math.floor(Math.min(canvas.width / width, canvas.height / height) * .95);
+  var left = Math.floor((canvas.width - width * scale) / 2);
+  var top = Math.floor((canvas.height - height * scale) / 2);
+  context.setTransform(scale, 0, 0, scale, left, top);
+
+  context.save();
+
+  context.beginPath();
+  context.rect(0, 0, width, height);
+  context.clip();
+  context.fillStyle = "#00FF00";
+  context.fill();
+
+  for (var color in players)
+    players[color].disk.draw();
+
+  if (pack)
+    pack.disk.draw();
+
+  context.restore();
+
+  context.beginPath();
+  context.rect(0, 0, width, height);
+  context.strokeStyle = "#00AA00";
+  context.lineWidth = .02;
+  context.stroke();
+
+  context.setTransform(1, 0, 0, 1, canvas.width / 2, canvas.height / 2);
+  context.font = Math.floor(canvas.width / 10) + "px Courier";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillText(message, 0, 0);
+
+  // touch
+  for (var color in players)
+    for (var direction in players[color].touch)
+      players[color].touch[direction] = false;
+  for (var i in touchState) {
+    var touch = touchState[i];
+    var color = touch.x < canvas.width / 2 ? "red" : "blue";
+    if (touch.y < top + (players[color].disk.coord.y - speed(0)) * scale)
+      players[color].touch.up = true;
+    if (touch.y > top + (players[color].disk.coord.y + speed(0)) * scale)
+      players[color].touch.down = true;
+  }
+
+  return;
+}
+
+function Player(color, x) {
+
+  this.score = 0;
+  this.x = x;
+  this.disk = new Disk(color, .2, 0);
+  this.disk.coord = new Coord(this.x, height / 2);
+  this.disk.velocity = new Coord(0, 0);
+  this.key = { up: false, down: false };
+  this.touch = { up: false, down: false };
+}
+
+Player.prototype.update = function() {
+  var up = this.key.up || this.touch.up;
+  var down = this.key.down || this.touch.down;
+  if (up && !down)
+    this.disk.velocity.y = -speed(0);
+  else if (!up && down)
+    this.disk.velocity.y = +speed(0);
+  else
+    this.disk.velocity.y = 0;
+  this.disk.update();
+};
+
+function Pack(num) {
+
+  this.rully = 0;
+  this.disk = new Disk("#000000", .05, 1);
+  this.disk.coord = new Coord(width / 2, height / 2);
+  switch (num % 4) {
+    case 0: this.disk.velocity = new Coord(+1, +1); break;
+    case 1: this.disk.velocity = new Coord(+1, -1); break;
+    case 2: this.disk.velocity = new Coord(-1, -1); break;
+    case 3: this.disk.velocity = new Coord(-1, +1); break;
+  }
+  this.disk.velocity.setNorm(speed(this.rully));
+}
+
+Pack.prototype.update = function(players) {
+  this.disk.update();
+  for (var color in players) {
+    if (this.disk.hit(players[color].disk)) {
+      this.rully++;
+      this.disk.velocity.setNorm(speed(this.rully));
+    }
+  }
+  return this;
+};
+
+function Disk(color, radius, restitution) {
+
+  this.coord = null;
+  this.velocity = null;
+  this.color = color;
+  this.radius = radius;
+  this.restitution = restitution;
+}
+
+Disk.prototype.draw = function() {
+  context.beginPath();
+  context.arc(this.coord.x, this.coord.y, this.radius, 0, 2 * Math.PI);
+  context.fillStyle = this.color;
+  context.fill();
+  return this;
+};
+
+Disk.prototype.update = function() {
+  this.coord.add(this.velocity);
+  if (this.coord.y < this.radius) {
+    this.coord.y = this.radius;
+    this.velocity.y *= -this.restitution;
+  }
+  if (this.coord.y > height - this.radius) {
+    this.coord.y = height - this.radius;
+    this.velocity.y *= -this.restitution;
+  }
+  return this;
+};
+
+Disk.prototype.hit = function(disk) {
+  var r = this.radius + disk.radius;
+  var rr = r * r;
+  var d = this.coord.diff(disk.coord);
+  var dd = d.normSquare();
+  if (dd < rr) {
+    var v = this.velocity.diff(disk.velocity);
+    var dv = d.inProd(v);
+    var vv = v.normSquare();
+    var t = (dv + Math.sqrt(dv * dv + vv * (rr - dd))) / vv;
+    d.add(v.mult(-t));
+    dv = d.inProd(v);
+    var s = -2 * dv / rr;
+    v.add(d.mult(s));
+    this.coord = disk.coord.copy().add(d);
+    this.velocity = disk.velocity.copy().add(v);
+    return true;
+  }
+  else
+    return false;
+};
+
+function Coord(x, y) {
+
+  this.x = x;
+  this.y = y;
+}
+
+Coord.prototype.setNorm = function(norm) {
+  if (this.norm() > 0)
+    this.times(norm / this.norm());
+  return this;
+};
+
+Coord.prototype.norm = function() {
+  return Math.sqrt(this.normSquare());
+};
+
+Coord.prototype.normSquare = function() {
+  return this.inProd(this);
+};
+
+Coord.prototype.inProd = function(coord) {
+  return this.x * coord.x + this.y * coord.y;
+};
+
+Coord.prototype.add = function (coord) {
+  this.x += coord.x;
+  this.y += coord.y;
+  return this;
+};
+
+Coord.prototype.times = function(num) {
+  this.x *= num;
+  this.y *= num;
+  return this;
+};
+
+Coord.prototype.diff = function(coord) {
+  return new Coord(this.x - coord.x, this.y - coord.y);
+};
+
+Coord.prototype.mult = function(num) {
+  return new Coord(this.x * num, this.y * num);
+};
+
+Coord.prototype.copy = function() {
+  return new Coord(this.x, this.y);
+};
+
+</script>
+<style type="text/css">
+html, body, canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+}
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+</body>
+</html>

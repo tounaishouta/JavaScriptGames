@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>Snake</title>
+<script type="text/javascript">
+
+var mode;
+var frame;
+
+var snakes;
+
+var canvas;
+var context;
+
+var touchState = new Object();
+
+var waitTime = 800;
+var width = 9;
+var height = 9;
+var initLength = 5;
+var incInt = 3;
+var bodyIncInt = 3;
+
+onload = function() {
+
+  canvas = document.getElementById("canvas");
+  context = canvas.getContext("2d");
+
+  addEventListener("resize", draw);
+  addEventListener("keydown", keyEventHandler);
+  addEventListener("touchstart", touchEventHandler);
+  addEventListener("touchmove", touchEventHandler);
+  addEventListener("touchend", touchEventHandler);
+  addEventListener("touchcancel", touchEventHandler);
+
+  begin();
+
+  return;
+};
+
+function begin() {
+
+  mode = "begin";
+  frame = 0;
+
+  snakes = new Object();
+  snakes.red = new Snake("#FF0000", "#AA0000", 1, new Coord(0, 0));
+  snakes.blue = new Snake("#0000FF", "#0000AA", 3, new Coord(width - 1, height - 1));
+
+  draw();
+
+  return;
+}
+
+function main() {
+
+  mode = "main";
+  frame++;
+
+  if (frame % incInt == 0)
+    for (var color in snakes)
+      snakes[color].lengthen(frame / incInt % bodyIncInt == 0);
+  for (var color in snakes)
+    snakes[color].update();
+  for (var color in snakes) {
+    snakes[color].fail = snakes[color].touchWall();
+    for (var c in snakes)
+      snakes[color].fail = snakes[color].fail
+        || (color != c && snakes[color].touchHead(snakes[c]) && snakes[color].date >= snakes[c].date)
+        || snakes[color].touchBody(snakes[c]);
+  }
+  for (var color in snakes)
+    if (snakes[color].fail)
+      snakes[color].shorten();
+
+  draw();
+
+  if (snakes.red.dead() || snakes.blue.dead())
+    setTimeout(end, waitTime);
+  else
+    setTimeout(main, waitTime);
+
+  return;
+}
+
+function end() {
+
+  mode = "end";
+  setTimeout(function() { mode = "next"; }, waitTime);
+
+  draw();
+
+  return;
+}
+
+function draw() {
+
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+
+  var size = Math.floor(Math.min(canvas.width / width, canvas.height / (1 + height + 1))) - 1;
+  var left = Math.floor((canvas.width - width * size) / 2);
+  var top = Math.floor((canvas.height - height * size) / 2);
+
+  context.setTransform(size, 0, 0, size, left, top);
+  context.fillStyle = "#00FF00";
+  context.fillRect(0, 0, width, height);
+  context.strokeStyle = "#00AA00";
+  context.lineWidth = .02;
+  context.beginPath();
+  for (var i = 0; i <= width; i++) {
+    context.moveTo(i, 0);
+    context.lineTo(i, height);
+  }
+  for (var j = 0; j <= height; j++) {
+    context.moveTo(0, j);
+    context.lineTo(width, j);
+  }
+  context.stroke();
+
+  context.setTransform(size, 0, 0, size, left + size / 2, top + size / 2);
+  for (var color in snakes)
+    snakes[color].draw();
+
+  switch (mode) {
+    case "begin":
+      for (var color in snakes)
+        snakes[color].message = snakes[color].ready ? "READY" : "TAP TO START";
+      break;
+    case "main":
+      for (var color in snakes)
+        snakes[color].message = "SWIPE TO TURN";
+      break;
+    case "end":
+    case "next":
+      if (snakes.red.dead() && snakes.blue.dead()) {
+        snakes.red.message = "DRAW";
+        snakes.blue.message = "DRAW";
+      }
+      else if (snakes.red.dead() && !snakes.blue.dead()) {
+        snakes.red.message = "YOU LOSE";
+        snakes.blue.message = "YOU WIN";
+      }
+      else if (!snakes.red.dead() && snakes.blue.dead()) {
+        snakes.red.message = "YOU WIN";
+        snakes.blue.message = "YOU LOSE";
+      }
+      break;
+  }
+  context.font = size + "px Courier";
+  context.textAlign = "center";
+  context.textBaseline = "bottom";
+  context.setTransform(-1, 0, 0, -1, canvas.width / 2, 0);
+  context.fillStyle = snakes.red.bodyColor;
+  context.fillText(snakes.red.message, 0, 0);
+  context.setTransform(1, 0, 0, 1, canvas.width / 2, canvas.height);
+  context.fillStyle = snakes.blue.bodyColor;
+  context.fillText(snakes.blue.message, 0, 0);
+
+  return;
+}
+
+function tap(color) {
+  switch (mode) {
+    case "begin":
+      snakes[color].ready = true;
+      var ready = true;
+      for (var c in snakes)
+        ready = ready && snakes[c].ready;
+      if (ready)
+        main();
+      draw();
+      break;
+    case "next":
+      begin();
+      break;
+  }
+  return;
+}
+
+function keyEventHandler(event) {
+  switch (mode) {
+    case "begin":
+    case "next":
+      switch (event.keyCode) {
+        case 68:
+        case 83:
+        case 65:
+        case 87:
+          tap("red");
+          break;
+        case 39:
+        case 40:
+        case 37:
+        case 38:
+          tap("blue");
+          break;
+      }
+      break;
+    case "main":
+      switch (event.keyCode) {
+        case 68: snakes.red.turn(0); break;
+        case 83: snakes.red.turn(1); break;
+        case 65: snakes.red.turn(2); break;
+        case 87: snakes.red.turn(3); break;
+        case 39: snakes.blue.turn(0); break;
+        case 40: snakes.blue.turn(1); break;
+        case 37: snakes.blue.turn(2); break;
+        case 38: snakes.blue.turn(3); break;
+      }
+      break;
+  }
+  return;
+}
+
+function touchEventHandler(event) {
+  event.preventDefault();
+  for (var i = 0; i < event.changedTouches.length; i++) {
+    var touchEvent = event.changedTouches[i];
+    switch (event.type) {
+      case "touchstart":
+        var touchData = new TouchData(touchEvent);
+        var color = touchData.color();
+        if (color)
+          tap(color);
+        touchState[touchEvent.identifier] = touchData;
+        break;
+      case "touchmove":
+        var touchData = touchState[touchEvent.identifier];
+        touchData.update(touchEvent);
+        if (mode == "main") {
+          var color = touchData.color();
+          if (color != null) {
+            var direction = touchData.swipe();
+            if (direction != null)
+              snakes[color].turn(direction);
+          }
+          else
+            touchData.reset();
+        }
+        else
+          touchData.reset();
+        break;
+      case "touchend":
+      case "touchcancel":
+        delete touchState[t.identifier];
+        break;
+    }
+  }
+  return;
+}
+
+function Snake(bodyColor, tailColor, direction, coord) {
+  this.bodyColor = bodyColor;
+  this.tailColor = tailColor;
+  this.bodyLength = initLength;
+  this.tailLength = 1;
+  this.direction = direction;
+  this[0] = coord;
+  for (var i = 1; i < this.bodyLength + this.tailLength; i++)
+    this[i] = new Coord(NaN, NaN);
+  this.date = new Date();
+  this.ready = false;
+  this.message;
+  this.fail;
+}
+
+Snake.prototype.update = function() {
+  for (var i = this.bodyLength + this.tailLength - 1; i > 0; i--)
+    this[i] = this[i - 1];
+  switch (this.direction) {
+    case 0: this[0] = new Coord(this[0].x + 1, this[0].y); break;
+    case 1: this[0] = new Coord(this[0].x, this[0].y + 1); break;
+    case 2: this[0] = new Coord(this[0].x - 1, this[0].y); break;
+    case 3: this[0] = new Coord(this[0].x, this[0].y - 1); break;
+  }
+  return;
+};
+
+Snake.prototype.dead = function() {
+  return this.bodyLength == 0;
+};
+
+Snake.prototype.touchWall = function() {
+  return this[0].x < 0 || this[0].y < 0 || this[0].x >= width || this[0].y >= height;
+};
+
+Snake.prototype.touchHead = function(snake) {
+  return this[0].equals(snake[0]);
+};
+
+Snake.prototype.touchBody = function(snake) {
+  var touch = false;
+  for (var i = 1; !touch && i < snake.bodyLength + snake.tailLength; i++)
+    touch = this[0].equals(snake[i]);
+  return touch;
+};
+
+Snake.prototype.lengthen = function(body) {
+  if (body)
+    this.bodyLength++;
+  else
+    this.tailLength++;
+  return;
+};
+
+Snake.prototype.shorten = function() {
+  this.bodyLength--;
+  for (var i = 0; i < this.bodyLength + this.tailLength; i++)
+    this[i] = this[i + 1];
+  delete this[this.bodyLength + this.tailLength];
+  return;
+};
+
+Snake.prototype.turn = function(direction) {
+  this.direction = direction;
+  this.date = new Date();
+  draw();
+  return;
+};
+
+Snake.prototype.draw = function() {
+  for (var i = this.bodyLength; i + 1 < this.bodyLength + this.tailLength; i++)
+    this[i].lineTo(this[i + 1], this.tailColor, .5);
+  for (var i = 1; i + 1 < this.bodyLength; i++)
+    this[i].lineTo(this[i + 1], this.bodyColor, .5);
+  for (var i = this.bodyLength; i < this.bodyLength + this.tailLength; i++)
+    this[i].fillArc(this.tailColor, .25, 0, 2 * Math.PI);
+  for (var i = 1; i < this.bodyLength; i++)
+    this[i].fillArc(this.bodyColor, .25, 0, 2 * Math.PI);
+  if (0 < this.bodyLength)
+    this[0].fillArc(this.bodyColor, .4, (this.direction / 2 + 1 / 6) * Math.PI, (this.direction / 2 - 1 / 6) * Math.PI);
+  return;
+};
+
+function Coord(x, y) {
+  this.x = x;
+  this.y = y;
+}
+
+Coord.prototype.equals = function(coord) {
+  return this.x == coord.x && this.y == coord.y;
+};
+
+Coord.prototype.fillArc = function(color, radius, begin, end) {
+  context.fillStyle = color;
+  context.beginPath();
+  context.moveTo(this.x, this.y);
+  context.arc(this.x, this.y, radius, begin, end);
+  context.closePath();
+  context.fill();
+  return;
+};
+
+Coord.prototype.lineTo = function(coord, color, width) {
+  context.strokeStyle = color;
+  context.lineWidth = width;
+  context.beginPath();
+  context.moveTo(this.x, this.y);
+  context.lineTo(coord.x, coord.y);
+  context.stroke();
+  return;
+};
+
+function TouchData(touchEvent) {
+
+  this.x = touchEvent.clientX;
+  this.y = touchEvent.clientY;
+  this.beginX = this.x;
+  this.beginY = this.y;
+}
+
+TouchData.prototype.update = function(touchEvent) {
+  this.x = touchEvent.clientX;
+  this.y = touchEvent.clientY;
+  return this;
+};
+
+TouchData.prototype.reset = function() {
+  this.beginX = this.x;
+  this.beginY = this.y;
+  return this;
+};
+
+TouchData.prototype.color = function() {
+  if (this.y < innerHeight / 2 && this.beginY < innerHeight / 2)
+    return "red";
+  else if (this.y > innerHeight / 2 && this.beginY > innerHeight / 2)
+    return "blue";
+  else
+    return null;
+};
+
+TouchData.prototype.swipe = function() {
+  var diff = Math.floor(Math.min(innerWidth, innerHeight) / 10);
+  if (this.x > this.beginX + diff) {
+    this.reset();
+    return 0;
+  }
+  else if (this.y > this.beginY + diff) {
+    this.reset();
+    return 1;
+  }
+  else if (this.x < this.beginX - diff) {
+    this.reset();
+    return 2;
+  }
+  else if (this.y < this.beginY - diff) {
+    this.reset();
+    return 3;
+  }
+  else
+    return null;
+};
+
+
+</script>
+<style type="text/css">
+html, body, canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+}
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+</body>
+</html>

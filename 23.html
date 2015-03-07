@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>23</title>
+<style type="text/css">
+html, body, canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+}
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<script type="text/javascript">
+
+var FPS = 20,
+    playTime = 60 * 1000,
+    mode = "begin",
+    score,
+    cell,
+    endTime,
+    lastStatus,
+    canvas = document.getElementById("canvas"),
+    context = canvas.getContext("2d"),
+    size,
+    x0,
+    y0;
+
+addEventListener("resize", draw);
+addEventListener("mousedown", mouseEventHandler);
+addEventListener("keydown", keyEventHandler);
+addEventListener("touchstart", function(event) { event.preventDefault(); });
+addEventListener("touchmove", function(event) { event.preventDefault(); });
+addEventListener("touchend", function(event) { event.preventDefault(); });
+addEventListener("touchcancel", function(event) { event.preventDefault(); });
+addEventListener("touchstart", touchEventHandler);
+
+draw();
+
+function begin() {
+  score = 0;
+  cell = new Array(3);
+  for (var i = 0; i < 3; i++)
+    cell[i] = new Array(3);
+  randomize();
+  endTime = new Date().getTime() + playTime;
+  lastStatus = "";
+  main();
+  return;
+}
+
+function main() {
+  mode = "main";
+  if (new Date().getTime() > endTime) {
+    end();
+  } else {
+    draw();
+    check();
+    setTimeout(main, 1000 / FPS);
+  }
+  return;
+}
+
+function end() {
+  mode = "end";
+  setTimeout(function() { mode = "next"; }, 1000);
+  draw();
+  return;
+}
+
+function randomize() {
+  for (var i = 0; i < 3; i++)
+    for (var j = 0; j < 3; j++)
+      cell[i][j] = new Cell();
+  var makable = new Array(23 + 1);
+  makable[0] = true;
+  for (var n = 1; n <= 23; n++)
+    makable[n] = false;
+  for (var i = 0; i < 3; i++)
+    for (var j = 0; j < 3; j++)
+      for (var n = 23; n >= cell[i][j].value; n--)
+        makable[n] = makable[n] || makable[n - cell[i][j].value];
+  if (!makable[23])
+    randomize();
+  return;
+}
+
+function check() {
+  var sum = 0;
+  for (var i = 0; i < 3; i++)
+    for (var j = 0; j < 3; j++)
+      if (cell[i][j].selected)
+        sum += cell[i][j].value;
+  if (sum >= 23) {
+    if (sum === 23) {
+      score++;
+      lastStatus = "OK!";
+    } else {
+      lastStatus = "Miss";
+    }
+    randomize();
+  }
+  return;
+}
+
+function draw() {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  context.fillStyle = "#888";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  size = Math.floor(Math.min(canvas.width / 4, canvas.height / 5));
+  x0 = Math.floor((canvas.width - 3 * size) / 2);
+  y0 = Math.floor((canvas.height - 3 * size) / 2);
+  switch (mode) {
+    case "begin":
+      context.font = (2 * size) + "px Courier";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillStyle = "#000";
+      context.fillText(23, canvas.width / 2, canvas.height / 2);
+      break;
+    case "main":
+      context.setTransform(size, 0, 0, size, x0, y0);
+      for (var i = 0; i < 3; i++) {
+        for (var j = 0; j < 3; j++) {
+          context.fillStyle = cell[i][j].color();
+          context.fillRect(i, j, 1, 1);
+        }
+      }
+      context.beginPath();
+      context.rect(0, 0, 3, 3);
+      for (var i = 1; i < 3; i++) {
+        context.moveTo(i, 0);
+        context.lineTo(i, 3);
+        context.moveTo(0, i);
+        context.lineTo(3, i);
+      }
+      context.strokeStyle = "#000";
+      context.lineWidth = .05;
+      context.stroke();
+      context.setTransform(1, 0, 0, 1, x0 + size / 2, y0 + size / 2);
+      context.fillStyle = "#000";
+      context.font = size + "px Courier";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      for (var i = 0; i < 3; i++)
+        for (var j = 0; j < 3; j++)
+          context.fillText(cell[i][j].value, i * size, j * size);
+      context.setTransform(1, 0, 0, 1, x0, y0);
+      context.fillStyle = "#000";
+      context.font = Math.floor(.5 * size) + "px Courier";
+      context.textAlign = "left";
+      context.textBaseline = "bottom";
+      context.fillText(twoDigit(endTime - new Date().getTime()), 0, 0);
+      context.textAlign = "right";
+      context.fillText(lastStatus, 3 * size, 0);
+      context.textBaseline = "top";
+      context.fillText(score + " x 23", 3 * size, 3 * size);
+      break;
+    case "end":
+    case "next":
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.fillStyle = "#000";
+      context.font = Math.floor(.5 *size) + "px Courier";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText(score + " x 23", canvas.width / 2, canvas.height / 2);
+  }
+  return;
+}
+
+function tap(i, j) {
+  switch (mode) {
+    case "begin":
+      begin();
+      break;
+    case "main":
+      if (0 <= i && i < 3 && 0 <= j && j < 3) {
+        cell[i][j].toggle();
+        if (lastStatus)
+          lastStatus = "";
+      } else {
+        randomize();
+        lastStatus = "Pass";
+      }
+      break;
+    case "next":
+      mode = "begin";
+      draw();
+      break;
+  }
+  return;
+}
+
+function Cell() {
+  this.selected = false;
+  this.value = Math.floor(Math.random() * 9) + 1;
+}
+
+Cell.prototype = {
+
+color:
+  function() {
+    if (this.selected) {
+      switch (this.value) {
+        case 1: return "#099";
+        case 2: return "#369";
+        case 3: return "#639";
+        case 4: return "#909";
+        case 5: return "#936";
+        case 6: return "#963";
+        case 7: return "#990";
+        case 8: return "#693";
+        case 9: return "#396";
+      }
+    } else {
+      switch (this.value) {
+        case 1: return "#6FF";
+        case 2: return "#9CF";
+        case 3: return "#C9F";
+        case 4: return "#F6F";
+        case 5: return "#F9C";
+        case 6: return "#FC9";
+        case 7: return "#FF6";
+        case 8: return "#CF9";
+        case 9: return "#9FC";
+      }
+    }
+  },
+
+toggle:
+  function() {
+    this.selected = !this.selected;
+    return;
+  }
+};
+
+function mouseEventHandler(event) {
+  var i = Math.floor((event.clientX - x0) / size),
+      j = Math.floor((event.clientY - y0) / size);
+  tap(i, j);
+  return;
+}
+
+function keyEventHandler(event) {
+  switch (event.keyCode) {
+    case 103: tap(0, 0); break;
+    case 100: tap(0, 1); break;
+    case  97: tap(0, 2); break;
+    case 104: tap(1, 0); break;
+    case 101: tap(1, 1); break;
+    case  98: tap(1, 2); break;
+    case 105: tap(2, 0); break;
+    case 102: tap(2, 1); break;
+    case  99: tap(2, 2); break;
+    default: tap(-1, -1); break;
+  }
+  return;
+}
+
+function touchEventHandler(event) {
+  for (var k = 0; k < event.changedTouches.length; k++) {
+    var t = event.changedTouches[k],
+        i = Math.floor((t.clientX - x0) / size),
+        j = Math.floor((t.clientY - y0) / size);
+    tap(i, j);
+  }
+  return;
+}
+
+function twoDigit(num) {
+  var str = "";
+  str += Math.floor(num / 10000);
+  str += Math.floor(num / 1000) % 10;
+  str += ".";
+  str += Math.floor(num / 100) % 10;
+  str += Math.round(num / 10) % 10;
+  return str;
+}
+
+</script>
+</body>
+</html>

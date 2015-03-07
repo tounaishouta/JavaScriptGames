@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>Rubik's Tube</title>
+<style type="text/css">
+html, body, canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+}
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<script type="text/javascript">
+
+var canvas = document.getElementById("canvas");
+
+var mode;
+var disabled;
+var erased;
+var combo;
+var score;
+var dropTime;
+var tube;
+
+var cubeSize;
+var canvasLeft;
+var canvasTop;
+
+var touches = new Object();
+
+var version = 27;
+var FPS = 20;
+var width = 5;
+var height = 10;
+var initPile = 5;
+var disapLength = 4;
+var disapTime = 8;
+var dropUnit = 30 * FPS;
+var fallSpeed = 1 / 4;
+var slideSpeed = 1 / 2;
+var pushSpeed = 1 / 2;
+var comboFrame = FPS;
+var colors = new Array("#FF0000", "#00FF00", "#0000FF", "#FFFF00", "#FF00FF", "#00FFFF");
+function level() { return Math.floor(erased / 16) + 1; }
+function point() { return level() * combo; }
+function dropRate() { return 30 + level(); }
+
+function Cube(exist) {
+  this.exist = exist;
+  if (this.exist) {
+    this.color = Math.floor(Math.random() * colors.length);
+    this.x = 0;
+    this.y = 0;
+    this.disap = 0;
+    this.fixed = false;
+  }
+  else {
+    this.fixed = false;
+  }
+}
+
+function initialize() {
+  tube = new Array();
+  for (var i = 0; i < width; i++) {
+    tube[i] = new Array();
+    for (var j = 0; j < height - initPile; j++)
+      tube[i][j] = new Cube(false);
+    for (var j = height - initPile; j < height; j++) {
+      tube[i][j] = new Cube(true);
+      tube[i][j].y = initPile;
+    }
+  }
+  tube[width] = new Array();
+  return;
+}
+
+function canDrop() {
+  var able = false;
+  for (var i = 0; !able && i < width; i++)
+    able = !tube[i][0].exist;
+  return able;
+}
+
+function canSlide(j) {
+  var able = true;
+  for (var i = 0; able && i < width; i++)
+    able = tube[i][j].fixed && tube[i][j].disap == 0 && tube[i][j].x == 0 && tube[i][j].y == 0;
+  return able;
+}
+
+function canPush(i) {
+  var able = true;
+  var j = height - 1;
+  while (able && j >= 0 && tube[i][j].exist) {
+    able = tube[i][j].disap == 0 && tube[i][j].x == 0 && tube[i][j].y <= 0;
+    j--;
+  }
+  return able && j >= 0;
+}
+
+function gameOver() {
+  var over = true;
+  for (var i = 0; over && i < width; i++)
+    for (var j = 0; over && j < height; j++)
+      over = tube[i][j].fixed && tube[i][j].disap == 0;
+  return over;
+}
+
+function drop() {
+  var i = Math.floor(Math.random() * width);
+  while (tube[i][0].exist)
+    i = (i + 1) % width;
+  tube[i][0] = new Cube(true);
+  tube[i][0].y = -1;
+  return;
+}
+
+function slide(j, ori) {
+  combo = 0;
+  switch (ori) {
+    case +1:
+      for (var i = width; i > 0; i--) {
+        tube[i][j] = tube[i - 1][j];
+        tube[i][j].x = -1;
+      }
+      tube[0][j] = tube[width][j];
+      return;
+    case -1:
+      tube[width][j] = tube[0][j];
+      for (var i = 0; i < width; i++) {
+        tube[i][j] = tube[i + 1][j];
+        tube[i][j].x = +1;
+      }
+      return;
+  }
+}
+
+function push(i) {
+  combo = 0;
+  score += level();
+  tube[i][height] = new Cube(true);
+  var j = height;
+  while (tube[i][j].exist)
+    j--;
+  while (j < height) {
+    tube[i][j] = tube[i][j + 1];
+    tube[i][j].y += 1;
+    j++;
+  }
+  return;
+}
+
+function restitute(x, a, b) {
+  if (x < 0)
+    return Math.min(x + a, 0);
+  if (x > 0)
+    return Math.max(x - b, 0);
+  else
+    return 0;
+}
+
+function updateX() {
+  for (var i = 0; i < width; i++)
+    for (var j = 0; j < height; j++)
+      if (tube[i][j].exist)
+        tube[i][j].x = restitute(tube[i][j].x, slideSpeed, slideSpeed);
+  return;
+}
+
+function updateY() {
+  for (var i = 0; i < width; i++) {
+    for (var j = 0; j + 1 < height; j++) {
+      if (tube[i][j].exist && tube[i][j].disap == 0 && tube[i][j].x == 0) {
+        if (!tube[i][j + 1].exist && tube[i][j].y > 0) {
+          tube[i][j + 1] = tube[i][j];
+          tube[i][j + 1].y -= 1;
+          tube[i][j] = new Cube(false);
+        }
+        else if (!tube[i][j + 1].exist || tube[i][j].y < tube[i][j + 1].y)
+          tube[i][j].y += fallSpeed;
+      }
+    }
+    tube[i][height - 1].y = restitute(tube[i][height - 1].y, fallSpeed, pushSpeed);
+    for (var j = height - 2; j >= 0; j--)
+      if (tube[i][j].exist && tube[i][j + 1].exist && tube[i][j].y > tube[i][j + 1].y)
+        tube[i][j].y = tube[i][j + 1].y;
+  }
+  return;
+}
+
+function updateDisap() {
+  for (var i = 0; i < width; i++) {
+    for (var j = 0; j < height; j++) {
+      if (tube[i][j].exist) {
+        if (tube[i][j].disap == disapTime)
+          tube[i][j] = new Cube(false);
+        else if (tube[i][j].disap > 0)
+          tube[i][j].disap++;
+      }
+    }
+  }
+
+  var aNum = 4;
+
+  function I(a, i, k) {
+    switch(a) {
+      case 0: return (i + k) % width;
+      case 1: return i;
+      case 2: return (i + k) % width;
+      case 3: return (i - k + width) % width;
+    }
+  }
+
+  function J(a, j, k) {
+    switch(a) {
+      case 0: return j;
+      case 1: return j + k;
+      case 2: return j + k;
+      case 3: return j + k;
+    }
+  }
+
+  for (var a = 0; a < aNum; a++) {
+    for (var i = 0; i < width; i++) {
+      for (var j = 0; J(a, j, disapLength - 1) < height; j++) {
+        if (tube[i][j].fixed) {
+          var coincide = true;
+          for (var k = 1; coincide && k < disapLength; k++)
+            coincide = tube[I(a, i, k)][J(a, j, k)].fixed && tube[i][j].color == tube[I(a, i, k)][J(a, j, k)].color;
+          if (coincide) {
+            for (var k = 0; k < disapLength; k++) {
+              if (tube[I(a, i, k)][J(a, j, k)].disap == 0) {
+                tube[I(a, i, k)][J(a, j, k)].disap = 1;
+                erased++;
+                combo++;
+                score += point();
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  return;
+}
+
+function updateFixed() {
+  for (var i = 0; i < width; i++) {
+    var stable = true;
+    for (var j = height - 1; j >= 0; j--) {
+      stable = stable && tube[i][j].exist && tube[i][j].y == 0;
+      tube[i][j].fixed = stable && tube[i][j].x == 0;
+    }
+  }
+  return;
+}
+
+function draw() {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  if (canvas.width == 980 && canvas.height == 1679) {
+    cubeSize = 140;
+    canvasLeft = 0;
+    canvasTop = -1;
+  }
+  else {
+    cubeSize = Math.floor(Math.min(canvas.width / (1 + width + 1), canvas.height / (1 + height + 1)));
+    canvasLeft = Math.floor((canvas.width - (1 + width + 1) * cubeSize) / 2);
+    canvasTop = Math.floor((canvas.height - (1 + height + 1) * cubeSize) / 2);
+  }
+  var context = canvas.getContext("2d");
+  context.save();
+  context.setTransform(cubeSize, 0, 0, cubeSize, canvasLeft, canvasTop);
+  context.fillStyle = "#000000";
+  context.beginPath();
+  context.rect(1, 1, width, height);
+  context.clip();
+  context.fill();
+  for (var i = 0; i < width; i++) {
+    for (var j = 0; j < height; j++) {
+      for (var s = -1; s <= 1; s++) {
+        if (tube[i][j].exist) {
+          context.setTransform(
+              cubeSize, 0, 0, cubeSize,
+              canvasLeft + (1 + s * width + i + tube[i][j].x) * cubeSize,
+              canvasTop + (1 + j + tube[i][j].y) * cubeSize);
+          context.fillStyle = tube[i][j].disap % 2 == 0 ? colors[tube[i][j].color] : "#FFFFFF";
+          context.beginPath();
+          context.arc(.6, .6, .4, 0 / 2 * Math.PI, 1 / 2 * Math.PI);
+          context.arc(.4, .6, .4, 1 / 2 * Math.PI, 2 / 2 * Math.PI);
+          context.arc(.4, .4, .4, 2 / 2 * Math.PI, 3 / 2 * Math.PI);
+          context.arc(.6, .4, .4, 3 / 2 * Math.PI, 4 / 2 * Math.PI);
+          context.closePath();
+          context.fill();
+        }
+      }
+    }
+  }
+  context.restore();
+  for (var j = 0; j < height; j++) {
+    if (canSlide(j)) {
+      context.fillStyle = "#000000";
+      context.setTransform(cubeSize, 0, 0, cubeSize, canvasLeft, canvasTop + (1 + j) * cubeSize);
+      context.beginPath();
+      context.lineTo(.2, .3);
+      context.lineTo(.8, .5);
+      context.lineTo(.2, .7);
+      context.closePath();
+      context.fill();
+      context.setTransform(cubeSize, 0, 0, cubeSize, canvasLeft + (1 + width) * cubeSize, canvasTop + (1 + j) * cubeSize);
+      context.beginPath();
+      context.lineTo(.8, .3);
+      context.lineTo(.2, .5);
+      context.lineTo(.8, .7);
+      context.closePath();
+      context.fill();
+    }
+  }
+  for (var i = 0; i < width; i++) {
+    if (canPush(i)) {
+      context.fillStyle = "#000000";
+      context.setTransform(cubeSize, 0, 0, cubeSize, canvasLeft + (1 + i) * cubeSize, canvasTop + (1 + height) * cubeSize);
+      context.beginPath();
+      context.lineTo(.3, .8);
+      context.lineTo(.5, .2);
+      context.lineTo(.7, .8);
+      context.closePath();
+      context.fill();
+    }
+  }
+  context.setTransform(1, 0, 0, 1, canvasLeft, canvasTop);
+  context.font = .75 * cubeSize + "px Courier";
+  context.textBaseline = "bottom";
+  context.textAlign = "left";
+  context.fillText("Lv." + level(), 0, cubeSize);
+  context.textAlign = "right";
+  context.fillText(score + "pt", (1 + width + 1) * cubeSize, cubeSize);
+  context.font = .25 * cubeSize + "px Courier";
+  context.fillText("ver." + version, (1 + width + 1) * cubeSize, (1 + height + 1) * cubeSize);
+  switch(mode) {
+    case "begin":
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.fillStyle = "#FFFFFF";
+      context.fillRect(canvasLeft + cubeSize, canvasTop + (1 + 4.5) * cubeSize, width * cubeSize, cubeSize);
+      context.fillStyle = "#000000";
+      context.font = .75 * cubeSize + "px Courier";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText("TAP TO START", canvas.width / 2, canvas.height /2);
+      break;
+    case "end":
+      context.setTransform(1, 0, 0, 1, 0, 0);
+      context.fillStyle = "#FFFFFF";
+      context.fillRect(canvasLeft + cubeSize, canvasTop + (1 + 4.5) * cubeSize, width * cubeSize, cubeSize);
+      context.fillStyle = "#000000";
+      context.font = .75 * cubeSize + "px Courier";
+      context.textAlign = "center";
+      context.textBaseline = "middle";
+      context.fillText("GAME OVER", canvas.width / 2, canvas.height /2);
+      break;
+  }
+  return;
+}
+
+function begin() {
+  mode = "begin";
+  erased = 0;
+  combo = 0;
+  score = 0;
+  dropTime = dropUnit;
+  initialize();
+  draw();
+}
+
+function main() {
+  mode = "main";
+  dropTime -= dropRate();
+  while (dropTime < 0 && canDrop()) {
+    drop();
+    dropTime += dropUnit;
+  }
+  checkTouches();
+  updateX();
+  updateY();
+  updateFixed();
+  updateDisap();
+  updateFixed();
+  draw();
+  if (gameOver())
+    setTimeout(end, 1000 / FPS);
+  else
+    setTimeout(main, 1000 / FPS);
+}
+
+function end() {
+  mode = "end";
+  draw();
+  disabled = true;
+  setTimeout(function() { disabled = false; }, 2000);
+}
+
+function tap(i, j) {
+  switch(mode) {
+    case "begin":
+      main();
+      return;
+    case "main":
+      if (i == -1)
+        if (j >= 0 && j < height && canSlide(j))
+          slide(j, +1);
+      if (i == width)
+        if (j >= 0 && j < height && canSlide(j))
+          slide(j, -1);
+      if (j == height)
+        if (i >= 0 && i < width && canPush(i))
+          push(i);
+      return;
+    case "end":
+      if (!disabled)
+        begin();
+      return;
+  }
+}
+
+function X2x(X) { return (X - canvasLeft - cubeSize) / cubeSize; }
+function Y2y(Y) { return (Y - canvasTop - cubeSize) / cubeSize; }
+function x2i(x) { return Math.floor(x); }
+function y2j(y) { return Math.floor(y); }
+function X2i(X) { return x2i(X2x(X)); }
+function Y2j(Y) { return y2j(Y2y(Y)); }
+
+function mouseEventHandler(event) {
+  switch (event.type) {
+    case "mousedown":
+      tap(X2i(event.clientX), Y2j(event.clientY));
+      return;
+  }
+}
+
+function touchEventHandler(event) {
+  event.preventDefault();
+  switch (event.type) {
+    case "touchstart":
+      for (var k = 0; k < event.changedTouches.length; k++) {
+        touch = new Object();
+        touch.x = X2x(event.changedTouches[k].clientX);
+        touch.y = Y2y(event.changedTouches[k].clientY);
+        touch.xMin = touch.x;
+        touch.xMax = touch.x;
+        touch.yMax = touch.y;
+        touch.i = x2i(touch.x);
+        touch.j = y2j(touch.y);
+        touch.end = false;
+        tap(touch.i, touch.j);
+        touches[event.changedTouches[k].identifier] = touch;
+      }
+      return;
+    case "touchmove":
+    case "touchend":
+    case "touchcancel":
+      for (var k = 0; k < event.changedTouches.length; k++) {
+        touch = touches[event.changedTouches[k].identifier];
+        touch.x = X2x(event.changedTouches[k].clientX);
+        touch.y = Y2y(event.changedTouches[k].clientY);
+        touch.end = event.type == "touchend" || event.type == "touchcancel";
+      }
+      return;
+  }
+}
+
+function checkTouches() {
+  for (var key in touches) {
+    var touch = touches[key];
+    if (y2j(touch.y) == touch.j) {
+      if (touch.x > touch.xMin + 1 && touch.j >= 0 && touch.j < height && canSlide(touch.j)) {
+        slide(touch.j, +1);
+        touch.xMin += 1;
+      }
+      if (touch.x < touch.xMin)
+        touch.xMin = touch.x;
+      if (touch.x < touch.xMax - 1 && touch.j >= 0 && touch.j < height && canSlide(touch.j)) {
+        slide(touch.j, -1);
+        touch.xMax -= 1;
+      }
+      if (touch.x > touch.xMax)
+        touch.xMax = touch.x;
+    }
+    else {
+      touch.j = y2j(touch.y);
+      touch.xMin = touch.x;
+      touch.xMax = touch.x;
+    }
+    if (x2i(touch.x) == touch.i) {
+      if (touch.y < touch.yMax - 1 && touch.i >= 0 && touch.i < width && canPush(touch.i)) {
+        push(touch.i);
+        touch.yMax -= 1;
+      }
+      if (touch.y > touch.yMax)
+        touch.yMax = touch.y;
+    }
+    else {
+      touch.i = x2i(touch.x);
+      touch.yMax = touch.y;
+    }
+    if (touch.end)
+      delete touches[key];
+  }
+  return;
+}
+
+addEventListener("resize", draw);
+addEventListener("mousedown", mouseEventHandler);
+addEventListener("touchstart", touchEventHandler);
+addEventListener("touchmove", touchEventHandler);
+addEventListener("touchend", touchEventHandler);
+addEventListener("touchcancel", touchEventHandler);
+
+begin();
+
+</script>
+</body>
+</html>

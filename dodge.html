@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>Dodge!</title>
+<script type="text/javascript">
+
+var mode;
+var frame;
+var blue;
+var reds;
+
+var canvas;
+var context;
+
+var version = 7;
+var FPS = 50;
+var radius = .01;
+var constant = .0003;
+var epsilon = .1;
+var friction = 2;
+var incInt = FPS * 5;
+var activate = FPS;
+var keyAccelRate = .001;
+var touchAccelRate = .0001;
+
+onload = function() {
+
+  canvas = document.getElementById("canvas");
+  context = canvas.getContext("2d");
+
+  addEventListener("resize", draw);
+  addEventListener("keydown", keyEventHandler);
+  addEventListener("keyup", keyEventHandler);
+  addEventListener("touchstart", touchEventHandler);
+  addEventListener("touchmove", touchEventHandler);
+  addEventListener("touchend", touchEventHandler);
+  addEventListener("touchcancel", touchEventHandler);
+
+  begin();
+
+  return;
+};
+
+function begin() {
+  mode = "begin";
+  frame = 0;
+  blue = new Ball("#0000FF", +1, 0, new Coord(.5, .5));
+  reds = new Array();
+  reds.push(new Ball("#FF0000", -1, 0, new Coord(.2, .2)));
+  reds.push(new Ball("#FF0000", -1, 0, new Coord(.8, .8)));
+  draw();
+  return;
+}
+
+function main() {
+  mode = "main";
+  frame++;
+  if ((frame + activate) % incInt === 0)
+    reds.push(new Ball("#FF0000", -1, activate, new Coord(Math.random(), Math.random())));
+  if (keyEventHandler[37]) blue.velocity.x -= keyAccelRate;
+  if (keyEventHandler[38]) blue.velocity.y -= keyAccelRate;
+  if (keyEventHandler[39]) blue.velocity.x += keyAccelRate;
+  if (keyEventHandler[40]) blue.velocity.y += keyAccelRate;
+  if (touchEventHandler.touches instanceof Object) {
+    for (var i in touchEventHandler.touches) {
+      var touchData = touchEventHandler.touches[i];
+      blue.velocity.x += touchAccelRate * touchData.diffX();
+      blue.velocity.y += touchAccelRate * touchData.diffY();
+      touchData.reset();
+    }
+  }
+  for (var i = 0; i < reds.length; i++) {
+    reds[i].coulomb(blue);
+    for (var j = 0; j < reds.length; j++)
+      if (i !== j)
+        reds[i].coulomb(reds[j]);
+  }
+  blue.update();
+  for (var i = 0; i < reds.length; i++)
+    reds[i].update();
+  draw();
+  var caught = false;
+  for (var i = 0; i < reds.length; i++)
+    caught = caught || blue.caught(reds[i]);
+  if (caught)
+    setTimeout(end, 1000 / FPS);
+  else
+    setTimeout(main, 1000 / FPS);
+  return;
+}
+
+function end() {
+  mode = "end";
+  draw();
+  setTimeout(function() { mode = "next"; }, 1000);
+  return;
+}
+
+function draw() {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  var size = Math.floor(Math.min(canvas.width, canvas.height) * 5 / 7);
+  var x0 = Math.floor((canvas.width - 3 * size) / 2);
+  var y0 = Math.floor((canvas.height - 3 * size) / 2);
+  context.setTransform(size, 0, 0, size, x0, y0);
+  context.fillStyle = "#00FF00";
+  context.fillRect(0, 0, 3, 3);
+  context.beginPath();
+  for (var i = 0; i <= 3; i++) {
+    context.moveTo(i, 0);
+    context.lineTo(i, 3);
+    context.moveTo(0, i);
+    context.lineTo(3, i);
+  }
+  context.strokeStyle = "#00AA00";
+  context.lineWidth = .002;
+  context.stroke();
+  blue.draw();
+  for (var i = 0; i < reds.length; i++)
+    reds[i].draw();
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  var message = "";
+  switch (mode) {
+    case "begin":
+      message = "Tap to Start";
+      break;
+    case "end":
+    case "next":
+      message = "Time: " + (frame / FPS).toTwoDigit() + "s";
+      break;
+  }
+  context.fillStyle = "#000000";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.font = Math.floor(size / 10) + "px Courier";
+  context.fillText(message, canvas.width / 2, canvas.height / 2);
+  context.textAlign = "right";
+  context.textBaseline = "top";
+  context.font = Math.floor(size / 10) + "px Courier";
+  context.fillText((frame / FPS).toTwoDigit() + "s", Math.min(canvas.width, x0 + 3 * size), Math.max(0, y0));
+  context.textAlign = "left";
+  context.textBaseline = "bottom";
+  context.font = Math.floor(size / 20) + "px Courier";
+  context.fillText("ver." + version, Math.max(0, x0), Math.min(canvas.height, y0 + 3 * size));
+  return;
+}
+
+function tap() {
+  switch (mode) {
+    case "begin":
+      main();
+      break;
+    case "next":
+      begin();
+      break;
+  }
+  return;
+}
+
+function keyEventHandler(event) {
+  var keydown = event.type === "keydown";
+  if (keydown)
+    tap();
+  keyEventHandler[event.keyCode] = keydown;
+  return;
+}
+
+function touchEventHandler(event) {
+  event.preventDefault();
+  if (touchEventHandler.touches === undefined)
+    touchEventHandler.touches = new Object();
+  for (var i = 0; i < event.changedTouches.length; i++) {
+    var touch = event.changedTouches[i];
+    switch (event.type) {
+      case "touchstart":
+        touchEventHandler.touches[touch.identifier] = new TouchData(touch);
+        tap();
+        break;
+      case "touchmove":
+        touchEventHandler.touches[touch.identifier].update(touch);
+        break;
+      case "touchend":
+      case "touchcancel":
+        delete touchEventHandler.touches[touch.identifier];
+    }
+  }
+  return;
+}
+
+function Ball(color, charge, activate, coord) {
+  this.color = color;
+  this.charge = charge;
+  this.activate = activate;
+  this.coord = coord;
+  this.velocity = new Coord(0, 0);
+}
+
+Ball.prototype = {
+
+draw: function() {
+        for (var s = 0; s < 3; s++) {
+          for (var t = 0; t < 3; t++) {
+            context.beginPath();
+            context.arc(s + this.coord.x, t + this.coord.y, radius, 0, 2 * Math.PI);
+            context.fillStyle = this.activate % 2 == 0 ? this.color : "#FFFFFF";
+            context.fill();
+          }
+        }
+        return this;
+      },
+
+coulomb: function(ball) {
+           if (this.activate === 0 && ball.activate === 0) {
+             var x = this.coord.x - ball.coord.x;
+             var y = this.coord.y - ball.coord.y;
+             var r = Math.sqrt(2 - Math.cos(2 * Math.PI * x) - Math.cos(2 * Math.PI * y));
+             if (r > 0) {
+               this.velocity.x += constant * this.charge * ball.charge * Math.sin(2 * Math.PI * x) / r / (r * r + epsilon);
+               this.velocity.y += constant * this.charge * ball.charge * Math.sin(2 * Math.PI * y) / r / (r * r + epsilon);
+             }
+           }
+           return this;
+         },
+
+update: function() {
+          if (this.activate > 0)
+            this.activate--;
+          else {
+            this.velocity.times(Math.exp(-friction * this.velocity.norm()));
+            this.coord.add(this.velocity).modulo();
+          }
+          return this;
+        },
+
+caught: function(ball) {
+          if (this.activate === 0 && ball.activate === 0) {
+            var x = this.coord.x - ball.coord.x;
+            x = Math.min(Math.abs(x), Math.abs(1 - x));
+            var y = this.coord.y - ball.coord.y;
+            y = Math.min(Math.abs(y), Math.abs(1 - y));
+            var dist = Math.sqrt(x * x + y * y);
+            return dist <= radius + radius;
+          }
+          else
+            return false;
+        }
+};
+
+function Coord(x, y) {
+  this.x = x;
+  this.y = y;
+}
+
+Coord.prototype = {
+
+add: function(coord) {
+       this.x += coord.x;
+       this.y += coord.y;
+       return this;
+     },
+
+times: function(num) {
+         this.x *= num;
+         this.y *= num;
+         return this;
+       },
+
+modulo: function() {
+          this.x -= Math.floor(this.x);
+          this.y -= Math.floor(this.y);
+          return this;
+        },
+
+norm: function() {
+        return Math.sqrt(this.x * this.x + this.y * this.y);
+      }
+};
+
+Number.prototype.toTwoDigit = function() {
+  str = new String();
+  str += Math.floor(this);
+  str += ".";
+  str += Math.floor(this * 10) % 10;
+  str += Math.round(this * 100) % 10;
+  return str;
+};
+
+function TouchData(touch) {
+  this.update(touch);
+  this.reset();
+}
+
+TouchData.prototype = {
+
+update: function(touch) {
+          this.x = touch.clientX;
+          this.y = touch.clientY;
+          return this;
+        },
+
+diffX: function() {
+         return this.x - this.prevX;
+       },
+
+diffY: function() {
+         return this.y - this.prevY;
+       },
+
+reset: function() {
+         this.prevX = this.x;
+         this.prevY = this.y;
+         return this;
+       }
+};
+
+</script>
+<style type="text/css">
+html, body, canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+}
+</style>
+<body>
+<canvas id="canvas"></canvas>
+</body>
+</html>

@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>Slizzle</title>
+<meta charset="utf-8"/>
+<style type="text/css">
+html, body, canvas#canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+}
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<script type="text/javascript">
+
+var size = 4,
+    canvas = document.getElementById("canvas"),
+    context = canvas.getContext("2d"),
+    scale,
+    baseX,
+    baseY,
+    table,
+    finger = null;
+
+function begin() {
+  size = Number(prompt("Size?", size));
+  var permutation =
+    size % 2 === 0 ?
+    randomPermutation() :
+    randomEvenPermutation();
+  table = new Array();
+  for (var i = 0; i < size; i++)
+    table[i] = new Array();
+  for (var i = 0; i < size; i++)
+    for (var j = 0; j < size; j++)
+      table[i][j] = permutation[i + j * size];
+  draw();
+  return;
+}
+
+function randomPermutation() {
+  var N = size * size,
+      permutation = new Array(),
+      remains = new Array();
+  for (var n = 0; n < N; n++)
+    remains[n] = n;
+  for (var n = 0; n < N; n++) {
+    var r = Math.floor(Math.random() * (N - n));
+    permutation[n] = remains[r];
+    remains.splice(r, 1);
+  }
+  return permutation;
+}
+
+function randomEvenPermutation() {
+  var N = size * size,
+      permutation = randomPermutation(),
+      inversion = 0;
+  for (var n = 0; n < N; n++)
+    for (var m = 0; m < n; m++)
+      if (permutation[m] > permutation[n])
+        inversion++;
+  if (inversion % 2 === 1) {
+    var temp = permutation[0];
+    permutation[0] = permutation[1];
+    permutation[1] = temp;
+  }
+  return permutation;
+}
+
+function draw() {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  scale = Math.floor(Math.min(.9 * canvas.width, .7 * canvas.height) / size);
+  baseX = Math.floor((canvas.width - size * scale) / 2);
+  baseY = Math.floor((canvas.height - size * scale) / 2);
+  drawTitle();
+  for (var i = 0; i < size; i++)
+    for (var j = 0; j < size; j++)
+      drawCell(i, j, table[i][j]);
+  if (finger) {
+    if (finger.dx !== 0)
+      drawMovingRow(true);
+    else
+      drawMovingCol(true);
+  }
+  return;
+}
+
+function drawTitle() {
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.fillStyle = "#333";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+  context.fillStyle = "#fff";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.font = Math.floor(Math.min(.9 * baseY, canvas.width / 5)) + "px Courier";
+  context.fillText("Slizzle", canvas.width / 2, baseY / 2, canvas.width);
+  context.font = Math.floor(Math.min(.5 * baseY, canvas.width / 10)) + "px Courier";
+  context.fillText("Reload to Randomize", canvas.width / 2, canvas.height - baseY / 2, canvas.width);
+  return;
+}
+
+function drawMovingRow() {
+  context.setTransform(1, 0, 0, 1, baseX, baseY + finger.j * scale);
+  context.save();
+  context.beginPath();
+  context.rect(0, 0, size * scale, scale);
+  context.clip();
+  for (var s = -1; s <= 1; s++)
+    for (var i = 0; i < size; i++)
+      drawCell(s * size + i + finger.dx, finger.j, table[i][finger.j], i === finger.i);
+  context.restore();
+  context.strokeRect(0, 0, size * scale, scale);
+  return;
+}
+
+function drawMovingCol() {
+  context.setTransform(1, 0, 0, 1, baseX + finger.i * scale, baseY);
+  context.save();
+  context.beginPath();
+  context.rect(0, 0, scale, size * scale);
+  context.clip();
+  for (var t = -1; t <= 1; t++)
+    for (var j = 0; j < size; j++)
+      drawCell(finger.i, t * size + j + finger.dy, table[finger.i][j], j === finger.j);
+  context.restore();
+  context.strokeRect(0, 0, scale, size * scale);
+  return;
+}
+
+function drawCell(i, j, n, dark) {
+  context.setTransform(1, 0, 0, 1, baseX + i * scale, baseY + j * scale);
+  context.beginPath();
+  context.rect(0, 0, scale, scale);
+  context.fillStyle = dark ? darkColor(n) : color(n);
+  context.fill();
+  context.stroke();
+  context.fillStyle = "#000";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.font = Math.floor(.8 * scale) + "px Courier";
+  context.fillText(n + 1, scale / 2, scale / 2, scale);
+  return;
+}
+
+function color(n) {
+  var i = n % size,
+      j = Math.floor(n / size),
+      c = Math.floor(255 / 3 / (size - 1));
+  return "rgb(" +
+    (255 - i * c) + ", " +
+    (255 - j * c) + ", " +
+    (255 - (2 * (size - 1) - i - j) * c) + ")";
+}
+
+function darkColor(n) {
+  var i = n % size,
+      j = Math.floor(n / size),
+      c = Math.floor(255 / 3 / (size - 1));
+  return "rgb(" +
+    (170 - i * c) + ", " +
+    (170 - j * c) + ", " +
+    (170 - (2 * (size - 1) - i - j) * c) + ")";
+}
+
+function mouseEventHandler(event) {
+  var x = (event.clientX - baseX) / scale,
+      y = (event.clientY - baseY) / scale;
+  manipulate(x, y, "mouse", event.type);
+  return;
+}
+
+function touchEventHandler(event) {
+  event.preventDefault();
+  for (var i = 0; i < event.changedTouches.length; i++) {
+    var t = event.changedTouches[i],
+        x = (t.clientX - baseX) / scale,
+        y = (t.clientY - baseY) / scale,
+        id = t.identifier;
+    manipulate(x, y, id, event.type);
+  }
+  return;
+}
+
+function manipulate(x, y, id, type) {
+  switch (type) {
+    case "mousedown":
+    case "touchstart":
+      if (finger === null &&
+          0 <= x && x < size &&
+          0 <= y && y < size) {
+        finger = new Object();
+        finger.i = Math.floor(x);
+        finger.j = Math.floor(y);
+        finger.x0 = x - finger.i;
+        finger.y0 = y - finger.j;
+        finger.dx = 0;
+        finger.dy = 0;
+        finger.id = id;
+      }
+      drawCell(finger.i, finger.j, table[finger.i][finger.j], true);
+      break;
+    case "mousemove":
+    case "touchmove":
+      if (finger && finger.id === id) {
+        if (0 <= x && x < size &&
+            0 <= y && y < size) {
+          var dx = x - (finger.i + finger.x0),
+              dy = y - (finger.j + finger.y0);
+          if (finger.dx === 0) {
+            if (finger.dy === 0) {
+              if (Math.abs(dx) > Math.abs(dy)) {
+                finger.dx = dx;
+                drawMovingRow();
+              }
+              else if (Math.abs(dx) < Math.abs(dy)) {
+                finger.dy = dy;
+                drawMovingCol();
+              }
+            }
+            else {
+              finger.dy = dy;
+              if (Math.round(dx) === 0) {
+                drawMovingCol();
+              }
+              else {
+                rotateY();
+                finger.dy = 0;
+                drawMovingCol();
+                finger.dx = dx;
+                drawMovingRow();
+              }
+            }
+          }
+          else {
+            if (finger.dy === 0) {
+              finger.dx = dx;
+              if (Math.round(dy) === 0) {
+                drawMovingRow();
+              }
+              else {
+                rotateX();
+                finger.dx = 0;
+                drawMovingRow();
+                finger.dy = dy;
+                drawMovingCol();
+              }
+            }
+            else {
+              alert("something wrong");
+            }
+          }
+        }
+        else {
+          manipulate(x, y, id, "mouseup");
+        }
+      }
+      break;
+    case "mouseup":
+    case "mouseout":
+    case "touchend":
+    case "touchcancel":
+      if (finger && finger.id === id) {
+        if (finger.dx !== 0) {
+          rotateX();
+          finger.dx = 0;
+          drawMovingRow();
+        }
+        if (finger.dy !== 0) {
+          rotateY();
+          finger.dy = 0;
+          drawMovingCol();
+        }
+        drawCell(finger.i, finger.j, table[finger.i][finger.j], false);
+        finger = null;
+      }
+      break;
+  }
+  return;
+}
+
+function rotateX() {
+  var di = Math.round(finger.dx);
+  while (di < 0)
+    di += size;
+  if (di > 0) {
+    var j = finger.j,
+        temp = new Array();
+    for (var i = 0; i < size; i++)
+      temp[i] = table[i][j];
+    for (var i = 0; i < size; i++)
+      table[(i + di) % size][j] = temp[i];
+    finger.i += di;
+    finger.i %= size;
+    finger.dx -= di;
+  }
+  return;
+}
+
+function rotateY() {
+  var dj = Math.round(finger.dy);
+  while (dj < 0)
+    dj += size;
+  if (dj > 0) {
+    var i = finger.i,
+        temp = new Array();
+    for (var j = 0; j < size; j++)
+      temp[j] = table[i][j];
+    for (var j = 0; j < size; j++)
+      table[i][(j + dj) % size] = temp[j];
+    finger.j += dj;
+    finger.j %= size;
+    finger.dy -= dj;
+  }
+  return;
+}
+
+addEventListener("resize", draw);
+addEventListener("mousedown", mouseEventHandler);
+addEventListener("mousemove", mouseEventHandler);
+addEventListener("mouseup", mouseEventHandler);
+addEventListener("mouseout", mouseEventHandler);
+addEventListener("touchstart", touchEventHandler);
+addEventListener("touchmove", touchEventHandler);
+addEventListener("touchend", touchEventHandler);
+addEventListener("touchcancel", touchEventHandler);
+
+begin();
+
+</script>
+</body>
+</html>

@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black">
+<title>15 puzzle</title>
+<meta charset="utf-8"/>
+<style type="text/css">
+html, body, canvas#canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  border: none;
+}
+</style>
+</head>
+<body>
+<canvas id="canvas"></canvas>
+<script type="text/javascript">
+
+var size = 4,
+    moveSpeed = 1 / 4,
+    waitTime = 1,
+    canvas = document.getElementById("canvas"),
+    context = canvas.getContext("2d"),
+    scale,
+    baseX,
+    baseY,
+    table,
+    x,
+    y;
+
+function begin() {
+  size = Number(prompt("size?", size));
+  document.title = (size * size - 1) + " puzzle";
+  var permutation = randomEvenPermutation();
+  permutation[size * size - 1] = null;
+  table = new Array(size);
+  for (var i = 0; i < size; i++)
+    table[i] = new Array(size);
+  for (var i = 0; i < size; i++)
+    for (var j = 0; j < size; j++)
+      table[i][j] = permutation[i + j * size];
+  x = size - 1;
+  y = size - 1;
+  move.state = false;
+  draw();
+  return;
+}
+
+function slide(direction) {
+  switch (direction) {
+    case 0:
+      if (x + 1 < size) {
+        move.state = true;
+        move.t = 0;
+        move.x = x;
+        move.y = y;
+        var temp = table[x][y];
+        table[x][y] = table[x + 1][y];
+        table[x + 1][y] = temp;
+        x++;
+        move();
+      }
+      break;
+    case 1:
+      if (y + 1 < size) {
+        move.state = true;
+        move.t = 0;
+        move.x = x;
+        move.y = y;
+        var temp = table[x][y];
+        table[x][y] = table[x][y + 1];
+        table[x][y + 1] = temp;
+        y++;
+        move();
+      }
+      break;
+    case 2:
+      if (x > 0) {
+        move.state = true;
+        move.t = 0;
+        move.x = x;
+        move.y = y;
+        var temp = table[x][y];
+        table[x][y] = table[x - 1][y];
+        table[x - 1][y] = temp;
+        x--;
+        move();
+      }
+      break;
+    case 3:
+      if (y > 0) {
+        move.state = true;
+        move.t = 0;
+        move.x = x;
+        move.y = y;
+        var temp = table[x][y];
+        table[x][y] = table[x][y - 1];
+        table[x][y - 1] = temp;
+        y--;
+        move();
+      }
+      break;
+  }
+  return;
+}
+
+function move() {
+  draw();
+  if (move.state) {
+    move.t += moveSpeed;
+    if (move.t >= 1)
+      move.state = false;
+    setTimeout(move, waitTime);
+  }
+  return;
+}
+
+function randomEvenPermutation() {
+  var N = size * size - 1,
+      permutation = new Array(),
+      remains = new Array();
+  for (var n = 0; n < N; n++)
+    remains.push(n);
+  for (var n = 0; n < N; n++) {
+    var r = Math.floor(Math.random() * remains.length);
+    permutation[n] = remains[r];
+    remains.splice(r, 1);
+  }
+  var inversion = 0;
+  for (var n = 0; n < N; n++)
+    for (var m = n + 1; m < N; m++)
+      if (permutation[n] > permutation[m])
+        inversion++;
+  if (inversion % 2 === 1) {
+    var temp = permutation[0];
+    permutation[0] = permutation[1];
+    permutation[1] = temp;
+  }
+  return permutation;
+}
+
+function draw() {
+  canvas.width = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
+  scale = Math.floor(Math.min(.9 * canvas.width, .7 * canvas.height) / size);
+  baseX = Math.floor((canvas.width - size * scale) / 2);
+  baseY = Math.floor((canvas.height - size * scale) / 2);
+
+  context.setTransform(1, 0, 0, 1, 0, 0);
+  context.fillStyle = "#ccc";
+  context.fillRect(0, 0, canvas.width, canvas.height);
+
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  context.fillStyle = "#000";
+  context.font = Math.floor(Math.min(baseY, canvas.width / 5)) + "px Courier";
+  context.fillText((size * size - 1) + " puzzle", canvas.width / 2, baseY / 2, canvas.width);
+  context.font = Math.floor(Math.min(.5 * baseY, canvas.width / 10)) + "px Courier";
+  context.fillText("Reload to Randomize", canvas.width / 2, canvas.height - baseY / 2, canvas.width);
+
+  context.font = Math.floor(.8 * scale) + "px Courier";
+  context.textAlign = "center";
+  context.textBaseline = "middle";
+  for (var i = 0; i < size; i++) {
+    for (var j = 0; j < size; j++) {
+      context.setTransform(1, 0, 0, 1, baseX + i * scale, baseY + j * scale);
+      context.beginPath();
+      context.rect(0, 0, scale, scale);
+      context.fillStyle = color(table[i][j]);
+      context.fill();
+      context.stroke();
+      if (table[i][j] !== null) {
+        context.fillStyle = "#000";
+        context.fillText(table[i][j] + 1, scale / 2, scale / 2, scale);
+      }
+    }
+  }
+
+  if (move.state) {
+    context.setTransform(1, 0, 0, 1, baseX + move.x * scale, baseY + move.y * scale);
+    context.fillStyle = "#000";
+    context.fillRect(0, 0, scale, scale);
+    context.setTransform(1, 0, 0, 1,
+        baseX + ((1 - move.t) * x + move.t * move.x) * scale,
+        baseY + ((1 - move.t) * y + move.t * move.y) * scale);
+    context.beginPath();
+    context.rect(0, 0, scale, scale);
+    context.fillStyle = color(table[move.x][move.y]);
+    context.fill();
+    context.stroke();
+    context.fillStyle = "#000";
+    context.fillText(table[move.x][move.y] + 1, scale / 2, scale / 2, scale);
+  }
+
+  return;
+}
+
+function color(n) {
+  if (n === null)
+    return "#000";
+  else {
+    var i = n % size,
+        j = Math.floor(n / size),
+        c = Math.floor(255 / (size - 1) / 3);
+    return "rgb(" +
+      (255 - i * c) + ", " +
+      (255 - j * c) + ", " +
+      (255 - (2 * (size - 1) - i - j) * c) + ")";
+  }
+}
+
+function keyEventHandler(event) {
+  switch (event.keyCode) {
+    case 37: slide(0); break;
+    case 38: slide(1); break;
+    case 39: slide(2); break;
+    case 40: slide(3); break;
+  }
+  return;
+}
+
+function touchEventHandler(event) {
+  event.preventDefault();
+  for (var i = 0; i < event.changedTouches.length; i++) {
+    var t = event.changedTouches[i];
+    switch (event.type) {
+      case "touchstart":
+        var touch = new Object();
+        touch.x = t.clientX;
+        touch.y = t.clientY;
+        touch.x0 = touch.x;
+        touch.y0 = touch.y;
+        touchEventHandler[t.identifier] = touch;
+        break;
+      case "touchmove":
+        var diff = scale;
+        var touch = touchEventHandler[t.identifier];
+        touch.x = t.clientX;
+        touch.y = t.clientY;
+        if (touch.x < touch.x0 - diff) {
+          slide(0);
+          touch.x0 -= diff;
+        }
+        if (touch.y < touch.y0 - diff) {
+          slide(1);
+          touch.y0 -= diff;
+        }
+        if (touch.x > touch.x0 + diff) {
+          slide(2);
+          touch.x0 += diff;
+        }
+        if (touch.y > touch.y0 + diff) {
+          slide(3);
+          touch.y0 += diff;
+        }
+        break;
+      case "touchend":
+      case "touchcancel":
+        delete touchEventHandler[t.identifier];
+        break;
+    }
+  }
+  return;
+}
+
+addEventListener("resize", draw);
+addEventListener("keydown", keyEventHandler);
+addEventListener("touchstart", touchEventHandler);
+addEventListener("touchmove", touchEventHandler);
+addEventListener("touchend", touchEventHandler);
+addEventListener("touchcancel", touchEventHandler);
+
+begin();
+
+</script>
+</body>
+</html>

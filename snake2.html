@@ -1,0 +1,301 @@
+<script>
+
+// title
+document.title = "Snake 2";
+
+// constants
+var snakeNum = 2;
+var FPS = 20;
+var speed = 10;
+var incRate = 3;
+var turnSpeed = Math.PI/FPS;
+var fieldSize = 1000;
+var bodyRadius = 20;
+var headRadius = 30;
+var cureRadius = 150;
+var initLength = 20;
+var margin = 10;
+
+// variables
+var snakes;
+var time;
+var control;
+var keyState;
+var intervalID;
+
+// canvas, context
+var canvas = document.createElement("canvas");
+addEventListener("load", function() { document.body.appendChild(canvas); });
+var context = canvas.getContext("2d");
+
+// class Coord
+function Coord(x, y) {
+
+  this.x = x;
+  this.y = y;
+
+  this.copy = function() {
+    return new Coord(this.x, this.y);
+  }
+
+  this.add = function(coord) {
+    this.x += coord.x;
+    this.y += coord.y;
+    return this;
+  }
+
+  this.diff = function(coord) {
+    return new Coord(this.x - coord.x, this.y - coord.y);
+  }
+
+  this.mult = function(num) {
+    return new Coord(num*this.x, num*this.y);
+  }
+
+  this.inProd = function(coord) {
+    return this.x*coord.x + this.y*coord.y;
+  }
+
+  this.lengthSquare = function() {
+    return this.inProd(this);
+  }
+
+  this.length = function() {
+    return Math.sqrt(this.lengthSquare());
+  }
+
+  this.draw = function(color, radius) {
+    context.fillStyle = color;
+    context.beginPath();
+    context.arc(this.x, this.y, radius, 0, 2*Math.PI);
+    context.fill();
+    return this;
+  }
+
+  this.drawHead = function(color, radius, direction) {
+    context.fillStyle = color;
+    context.beginPath();
+    context.moveTo(this.x, this.y);
+    context.arc(this.x, this.y, radius, direction + Math.PI/6, 2*Math.PI + direction - Math.PI/6);
+    context.closePath();
+    context.fill();
+    return this;
+  }
+
+}
+
+// function unitVector
+function unitVector(theta) {
+  return new Coord(Math.cos(theta), Math.sin(theta));
+}
+
+// class Snake
+function Snake(bodyColor, tailColor, coord, direction) {
+
+  this.bodyLength = initLength;
+  this.length = initLength;
+  this.coords = new Array();
+  this.coords[0] = coord;
+  for ( var i = 1; i < this.length; i++ )
+    this.coords[i] = new Coord(NaN, NaN);
+  this.direction = direction;
+
+  this.head = function() {
+    return this.coords[0];
+  }
+
+  this.turn = function(orientation) {
+    this.direction += orientation*turnSpeed;
+    return this;
+  }
+
+  this.update = function() {
+    for ( var i = this.length - 1; i > 0; i-- )
+      this.coords[i] = this.coords[i - 1].copy();
+    this.coords[0].add(unitVector(this.direction).mult(speed));
+    return this;
+  }
+
+  this.touchWall = function() {
+    var touch = false;
+    touch = touch || this.head().x < headRadius;
+    touch = touch || this.head().x > fieldSize - headRadius;
+    touch = touch || this.head().y < headRadius;
+    touch = touch || this.head().y > fieldSize - headRadius;
+    return touch;
+  }
+
+  this.touchSelf = function() {
+    var touch = false;
+    for ( var i = Math.floor((headRadius + bodyRadius)/speed) + 1; i < this.length; i++ )
+      touch = touch || this.head().diff(this.coords[i]).length() < headRadius + bodyRadius;
+    return touch;
+  }
+
+  this.touchSnake = function(snake) {
+    var touch = this.head().diff(snake.head()).length() < 2*headRadius;
+    for ( var i = 1; i < snake.length; i++ )
+      touch = touch || this.head().diff(snake.coords[i]).length() < headRadius + bodyRadius;
+    return touch;
+  }
+
+  this.touchCure = function() {
+    var touch = false;
+    for ( var s = 0; s <= 1; s++ )
+      for ( var t = 0; t<= 1; t++ )
+        touch = touch || this.head().diff(new Coord(s*fieldSize, t*fieldSize)).length() < headRadius + cureRadius;
+    return touch;
+  }
+
+  this.shorten = function() {
+    this.bodyLength--;
+    this.length--;
+    for ( var i = 0; i < this.length; i++ )
+      this.coords[i] = this.coords[i + 1].copy();
+    return this;
+  }
+
+  this.lengthen = function(body) {
+    if ( body )
+      this.bodyLength++;
+    this.length++;
+    this.coords[this.length - 1] = this.coords[this.length - 2].copy();
+    return;
+  }
+
+  this.draw = function() {
+    var i0 = Math.floor((headRadius + bodyRadius)/speed);
+    for ( var i = Math.max(i0, this.bodyLength); i < this.length; i++ )
+      this.coords[i].draw(tailColor, bodyRadius);
+    for ( var i = i0; i < this.bodyLength; i++ )
+      this.coords[i].draw(bodyColor, bodyRadius);
+    if ( this.bodyLength > 0 )
+      this.coords[0].drawHead(bodyColor, headRadius, this.direction);
+    else
+      this.coords[0].drawHead(tailColor, headRadius, this.direction);
+    return this;
+  }
+}
+
+// function drawField
+function drawField() {
+
+  var canvasSize = Math.min(innerWidth, innerHeight) - 4*margin;
+  canvas.style.position = "absolute";
+  canvas.style.left = (innerWidth - canvasSize - 2*margin)/2
+  canvas.style.top = (innerHeight - canvasSize - 2*margin)/2
+  canvas.style.width = canvasSize;
+  canvas.style.height = canvasSize;
+  canvas.style.border = "solid "+ margin +"px rgb(0, 85, 0)";
+
+  canvas.width = fieldSize;
+  canvas.height = fieldSize;
+
+  context.fillStyle = "rgb(0, 255, 0)";
+  context.fillRect(0, 0, fieldSize, fieldSize);
+
+  context.fillStyle = "rgb(0, 170, 0)";
+  for ( var s = 0; s <= 1; s++ ) {
+    for ( var t = 0; t <= 1; t++ ) {
+      context.beginPath();
+      context.arc(s*fieldSize, t*fieldSize, cureRadius, 0, 2*Math.PI);
+      context.fill();
+    }
+  }
+
+  for ( var i = 0; i < snakeNum; i++ )
+    snakes[i].draw();
+
+  return;
+}
+
+// function start
+function start() {
+
+  snakes = new Array(snakeNum);
+  snakes[0] = new Snake("rgb(0, 0, 255)", "rgb(0, 0, 85)", new Coord(headRadius, headRadius), 0);
+  snakes[1] = new Snake("rgb(255, 0, 0)", "rgb(85, 0, 0)", new Coord(fieldSize - headRadius, fieldSize - headRadius), Math.PI);
+
+  drawField();
+
+  time = 0;
+  control = true;
+  keyState = new Array(false, false, false, false);
+  intervalID = setInterval(main, 1000/FPS);
+
+  return;
+}
+
+// function main
+function main() {
+
+  time++;
+
+  if ( keyState[0] )
+    snakes[0].turn(-1);
+  if ( keyState[1] )
+    snakes[0].turn(+1);
+  if ( keyState[2] )
+    snakes[1].turn(-1);
+  if ( keyState[3] )
+    snakes[1].turn(+1);
+
+  for ( var i = 0; i < snakeNum; i++ )
+    snakes[i].update();
+
+  if ( time%incRate == 0 )
+    for ( var i = 0; i < snakeNum; i++ )
+      snakes[i].lengthen(snakes[i].touchCure());
+
+  for ( var i = 0; i < snakeNum; i++ )
+    if ( snakes[i].touchWall() || snakes[i].touchSelf() || snakes[i].touchSnake(snakes[1 - i]) )
+      snakes[i].shorten();
+
+  drawField();
+
+  if ( snakes[0].bodyLength < 1 || snakes[1].bodyLength < 1 ) {
+    control = false;
+    clearInterval(intervalID);
+    if ( snakes[0].bodyLength < 1 )
+      if ( snakes[1].bodyLength < 1 )
+        alert("Draw.");
+      else
+        alert("Red win.");
+    else
+      alert("Blue win.");
+    setTimeout(start, 0);
+  }
+
+  return;
+}
+
+// onload
+onload = start;
+
+// onkeydown
+document.onkeydown = function(event) {
+  if ( control ) {
+    switch ( event.keyCode ) {
+      case 65: keyState[0] = true; break
+      case 68: keyState[1] = true; break
+      case 37: keyState[2] = true; break
+      case 39: keyState[3] = true; break
+    }
+  }
+  return;
+}
+
+// onkeyup
+document.onkeyup = function(event) {
+  if ( control ) {
+    switch ( event.keyCode ) {
+      case 65: keyState[0] = false; break
+      case 68: keyState[1] = false; break
+      case 37: keyState[2] = false; break
+      case 39: keyState[3] = false; break
+    }
+  }
+  return;
+}
+
+</script>
