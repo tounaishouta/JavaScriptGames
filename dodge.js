@@ -289,7 +289,6 @@
           touch.y0 = t.clientY;
           touch.x1 = touch.x0;
           touch.y1 = touch.y0;
-          touch.end = false;
           touchState[t.identifier] = touch;
           break;
         case 'touchmove':
@@ -299,10 +298,7 @@
           break;
         case 'touchend':
         case 'touchcancel':
-          var touch = touchState[t.identifier];
-          touch.x1 = t.clientX;
-          touch.y1 = t.clientY;
-          touch.end = false;
+          delete touchState[t.identifier];
           break;
       }
     }
