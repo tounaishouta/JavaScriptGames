@@ -14,7 +14,7 @@
     reds.push(new Ball('#ff0000', -1, 0, -0.3, -0.3));
     reds.push(new Ball('#ff0000', -1, 0, +0.3, +0.3));
     draw('begin', 0, blue, reds);
-    tap = function() { main(1, blue, reds) };
+    tap = function() { mouseState = null; main(1, blue, reds); };
   }
 
   function main(frame, blue, reds) {
@@ -22,15 +22,23 @@
     var start = new Date().getTime();
 
     const keyAccel = 0.0005;
-    if (keyEventHandler[37]) { blue.dx -= keyAccel; }
-    if (keyEventHandler[38]) { blue.dy -= keyAccel; }
-    if (keyEventHandler[39]) { blue.dx += keyAccel; }
-    if (keyEventHandler[40]) { blue.dy += keyAccel; }
+    if (keyState[37]) { blue.dx -= keyAccel; }
+    if (keyState[38]) { blue.dy -= keyAccel; }
+    if (keyState[39]) { blue.dx += keyAccel; }
+    if (keyState[40]) { blue.dy += keyAccel; }
+
+    const mouseAccel = 0.00007;
+    if (mouseState !== null) {
+      blue.dx += mouseAccel * (mouseState.x1 - mouseState.x0);
+      blue.dy += mouseAccel * (mouseState.y1 - mouseState.y0);
+      mouseState.x0 = mouseState.x1;
+      mouseState.y0 = mouseState.y1;
+    }
 
     const touchAccel = 0.0001;
-    for (var id in touchEventHandler) {
+    for (var id in touchState) {
       console.log(id);
-      var touch = touchEventHandler[id];
+      var touch = touchState[id];
       blue.dx += touchAccel * (touch.x1 - touch.x0);
       blue.dy += touchAccel * (touch.y1 - touch.y0);
       touch.x0 = touch.x1;
@@ -87,10 +95,11 @@
       context.textAlign = 'center';
       context.textBaseline = 'middle';
       context.fillStyle = '#000000';
-      context.fillText('Ranking', canvas.width / 2, (0.5 / 10) * canvas.height, canvas.width);
+      context.fillText('Ranking',
+          canvas.width / 2, (0.5 / 10) * canvas.height, canvas.width);
       for (var j = 1; j <= 9; j++) {
         context.fillStyle = j == i ? '#ff0000' : '#000000';
-        context.fillText(j + '. ' + toSecond(r[j]),
+        context.fillText(j + '. ' + fill(toSecond(r[j]), 7),
             canvas.width / 2, ((j + 0.5) / 10) * canvas.height, canvas.width);
       }
 
@@ -242,11 +251,32 @@
     return s;
   }
 
+  function fill (s, width) {
+    while (s.length < width) { s = ' ' + s; }
+    return s;
+  }
+
+  var keyState = {};
+
   function keyEventHandler(event) {
     var keydown = event.type === 'keydown';
     if (keydown) { tap(); }
-    keyEventHandler[event.keyCode] = keydown;
+    keyState[event.keyCode] = keydown;
   }
+
+  var mouseState = null;
+
+  function mouseEventHandler(event) {
+    if (mouseState === null) {
+      mouseState = {};
+      mouseState.x0 = event.clientX;
+      mouseState.y0 = event.clientY;
+    }
+    mouseState.x1 = event.clientX;
+    mouseState.y1 = event.clientY;
+  }
+
+  var touchState = {};
 
   function touchEventHandler(event) {
     event.preventDefault();
@@ -261,16 +291,16 @@
           touch.x1 = touch.x0;
           touch.y1 = touch.y0;
           touch.end = false;
-          touchEventHandler[t.identifier] = touch;
+          touchState[t.identifier] = touch;
           break;
         case 'touchmove':
-          var touch = touchEventHandler[t.identifier];
+          var touch = touchState[t.identifier];
           touch.x1 = t.clientX;
           touch.y1 = t.clientY;
           break;
         case 'touchend':
         case 'touchcancel':
-          var touch = touchEventHandler[t.identifier];
+          var touch = touchState[t.identifier];
           touch.x1 = t.clientX;
           touch.y1 = t.clientY;
           touch.end = false;
@@ -281,6 +311,8 @@
 
   addEventListener('keydown', keyEventHandler);
   addEventListener('keyup', keyEventHandler);
+  addEventListener('click', function () { tap(); });
+  addEventListener('mousemove', mouseEventHandler);
   addEventListener('touchstart', touchEventHandler);
   addEventListener('touchmove', touchEventHandler);
   addEventListener('touchend', touchEventHandler);
