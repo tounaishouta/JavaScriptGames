@@ -1,7 +1,7 @@
 (function () {
 
-  const version = 8;
-  const FPS = 50;
+  const version = 10;
+  const FPS = 25;
   const radius = 0.01;
 
   var tap;
@@ -14,26 +14,16 @@
     reds.push(new Ball('#ff0000', -1, 0, -0.3, -0.3));
     reds.push(new Ball('#ff0000', -1, 0, +0.3, +0.3));
     draw('begin', 0, blue, reds);
-    tap = function() { mouseState = null; main(1, blue, reds); };
+    tap = function() { main(now(), 1, blue, reds); };
   }
 
-  function main(frame, blue, reds) {
+  function main(time, frame, blue, reds) {
 
-    var start = new Date().getTime();
-
-    const keyAccel = 0.0005;
+    const keyAccel = 0.003;
     if (keyState[37]) { blue.dx -= keyAccel; }
     if (keyState[38]) { blue.dy -= keyAccel; }
     if (keyState[39]) { blue.dx += keyAccel; }
     if (keyState[40]) { blue.dy += keyAccel; }
-
-    const mouseAccel = 0.00007;
-    if (mouseState !== null) {
-      blue.dx += mouseAccel * (mouseState.x1 - mouseState.x0);
-      blue.dy += mouseAccel * (mouseState.y1 - mouseState.y0);
-      mouseState.x0 = mouseState.x1;
-      mouseState.y0 = mouseState.y1;
-    }
 
     const touchAccel = 0.0001;
     for (var id in touchState) {
@@ -62,8 +52,8 @@
       setTimeout(end, 0, frame, blue, reds);
     }
     else {
-      setTimeout(main, start + 1000 / FPS - new Date().getTime(),
-          frame + 1, blue, reds);
+      time += 1000 / FPS;
+      setTimeout(main, time - now(), time, frame + 1, blue, reds);
     }
 
     tap = function () {};
@@ -220,7 +210,7 @@
       var y = 2 * Math.PI * (a.y - b.y);
       var r = Math.sqrt(2 - Math.cos(x) - Math.cos(y));
       if (r > 0) {
-        const k = 0.0003;
+        const k = 0.0008;
         const e = 0.1;
         a.dx += k * a.charge * b.charge * Math.sin(x) / r / (r * r + e);
         a.dy += k * a.charge * b.charge * Math.sin(y) / r / (r * r + e);
@@ -255,24 +245,16 @@
     return s;
   }
 
+  function now() {
+    return new Date().getTime();
+  }
+
   var keyState = {};
 
   function keyEventHandler(event) {
     var keydown = event.type === 'keydown';
     if (keydown) { tap(); }
     keyState[event.keyCode] = keydown;
-  }
-
-  var mouseState = null;
-
-  function mouseEventHandler(event) {
-    if (mouseState === null) {
-      mouseState = {};
-      mouseState.x0 = event.clientX;
-      mouseState.y0 = event.clientY;
-    }
-    mouseState.x1 = event.clientX;
-    mouseState.y1 = event.clientY;
   }
 
   var touchState = {};
@@ -283,31 +265,56 @@
       var t = event.changedTouches[i];
       switch (event.type) {
         case 'touchstart':
-          tap();
-          var touch = {};
-          touch.x0 = t.clientX;
-          touch.y0 = t.clientY;
-          touch.x1 = touch.x0;
-          touch.y1 = touch.y0;
-          touchState[t.identifier] = touch;
+          touchstart(t.identifier, t.clientX, t.clientY);
           break;
         case 'touchmove':
-          var touch = touchState[t.identifier];
-          touch.x1 = t.clientX;
-          touch.y1 = t.clientY;
+          touchmove(t.identifier, t.clientX, t.clientY);
           break;
         case 'touchend':
         case 'touchcancel':
-          delete touchState[t.identifier];
+          touchend(t.identifier, t.clientX, t.clientY);
           break;
       }
     }
   }
 
+  function mouseEventHandler(event) {
+    switch (event.type) {
+      case 'mousedown':
+        touchstart('mouse', event.clientX, event.clientY);
+        break;
+      case 'mousemove':
+        touchmove('mouse', event.clientX, event.clientY);
+        break;
+      case 'mouseup':
+        touchend('mouse', event.clientX, event.clientY);
+        break;
+    }
+  }
+
+  function touchstart(id, x, y) {
+    tap();
+    touchState[id] = { x0: x, y0: y, x1: x, y1: y }
+  }
+
+  function touchmove(id, x, y) {
+    if (touchState[id]) {
+      touchState[id].x1 = x;
+      touchState[id].y1 = y;
+    }
+  }
+
+  function touchend(id, x, y) {
+    if (touchState[id]) {
+      delete touchState[id];
+    }
+  }
+
   addEventListener('keydown', keyEventHandler);
   addEventListener('keyup', keyEventHandler);
-  addEventListener('click', function () { tap(); });
+  addEventListener('mousedown', mouseEventHandler);
   addEventListener('mousemove', mouseEventHandler);
+  addEventListener('mouseup', mouseEventHandler);
   addEventListener('touchstart', touchEventHandler);
   addEventListener('touchmove', touchEventHandler);
   addEventListener('touchend', touchEventHandler);
