@@ -53,7 +53,8 @@
     }
     else {
       time += 1000 / FPS;
-      setTimeout(main, time - now(), time, frame + 1, blue, reds);
+      frame++;
+      setTimeout(main, time - now(), time, frame, blue, reds);
     }
 
     tap = function () {};
@@ -263,23 +264,18 @@
     event.preventDefault();
     for (var i in event.changedTouches) {
       var t = event.changedTouches[i];
-      for (var p in t) {
-        alert(p + ": " + t[p]);
+      switch (event.type) {
+        case 'touchstart':
+          touchstart(t.identifier, t.clientX, t.clientY);
+          break;
+        case 'touchmove':
+          touchmove(t.identifier, t.clientX, t.clientY);
+          break;
+        case 'touchend':
+        case 'touchcancel':
+          touchend(t.identifier, t.clientX, t.clientY);
+          break;
       }
-      /*
-         switch (event.type) {
-         case 'touchstart':
-         touchstart();
-         break;
-         case 'touchmove':
-         touchmove();
-         break;
-         case 'touchend':
-         case 'touchcancel':
-         touchend();
-         break;
-         }
-         */
     }
   }
 
