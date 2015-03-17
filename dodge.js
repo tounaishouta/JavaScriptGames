@@ -14,7 +14,7 @@
     reds.push(new Ball('#ff0000', -1, 0, -0.3, -0.3));
     reds.push(new Ball('#ff0000', -1, 0, +0.3, +0.3));
     draw('begin', 0, blue, reds);
-    tap = function() { main(now(), 1, blue, reds); };
+    tap = function() { main(now(), 0, blue, reds); };
   }
 
   function main(time, frame, blue, reds) {
@@ -25,16 +25,16 @@
     if (keyState[39]) { blue.dx += keyAccel; }
     if (keyState[40]) { blue.dy += keyAccel; }
 
-    /*
-       const touchAccel = 0.0001;
-       for (var id in touchState) {
-       var touch = touchState[id];
-       blue.dx += touchAccel * (touch.x1 - touch.x0);
-       blue.dy += touchAccel * (touch.y1 - touch.y0);
-       touch.x0 = touch.x1;
-       touch.y0 = touch.y1;
-       }
-       */
+    const touchAccel = 0.0001;
+    for (var id in touchState) {
+      /*
+         var touch = touchState[id];
+         blue.dx += touchAccel * (touch.x1 - touch.x0);
+         blue.dy += touchAccel * (touch.y1 - touch.y0);
+         touch.x0 = touch.x1;
+         touch.y0 = touch.y1;
+         */
+    }
 
     for (var i in reds) {
       coulomb(reds[i], blue);
@@ -44,7 +44,7 @@
     update(blue);
     for (var i in reds) { update(reds[i]); }
 
-    if (frame % (FPS * 5) === 0) {
+    if ((frame + FPS) % (FPS * 5) === 0) {
       reds.push(new Ball('#ff0000', -1, FPS, Math.random() - 0.5, Math.random() - 0.5));
     }
 
