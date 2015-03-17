@@ -1,6 +1,6 @@
 (function () {
 
-  const version = 10;
+  const version = 11;
   const FPS = 25;
   const radius = 0.01;
 
@@ -19,13 +19,13 @@
 
   function main(time, frame, blue, reds) {
 
-    /*
-       const keyAccel = 0.003;
-       if (keyState[37]) { blue.dx -= keyAccel; }
-       if (keyState[38]) { blue.dy -= keyAccel; }
-       if (keyState[39]) { blue.dx += keyAccel; }
-       if (keyState[40]) { blue.dy += keyAccel; }
+    const keyAccel = 0.003;
+    if (keyState[37]) { blue.dx -= keyAccel; }
+    if (keyState[38]) { blue.dy -= keyAccel; }
+    if (keyState[39]) { blue.dx += keyAccel; }
+    if (keyState[40]) { blue.dy += keyAccel; }
 
+    /*
        const touchAccel = 0.0001;
        for (var id in touchState) {
        var touch = touchState[id];
