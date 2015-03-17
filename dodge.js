@@ -30,8 +30,8 @@
     const touchAccel = 0.0001;
     for (var id in touchState) {
       var touch = touchState[id];
-      blue.dx += touchAccel * (touch.x - touch.prevX);
-      blue.dy += touchAccel * (touch.y - touch.prevY);
+      blue.dx += touchAccel * (Number(touch.x) - Number(touch.prevX));
+      blue.dy += touchAccel * (Number(touch.y) - Number(touch.prevY));
       touch.prevX = touch.x;
       touch.prevY = touch.y;
     }
