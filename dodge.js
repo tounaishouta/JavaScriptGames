@@ -1,6 +1,6 @@
 (function () {
 
-  const version = '8.2';
+  const version = '8.3';
   const FPS = 25;
   const radius = 0.01;
 
@@ -27,7 +27,7 @@
     if (keyState[39]) { blue.dx += keyAccel; }
     if (keyState[40]) { blue.dy += keyAccel; }
 
-    const touchAccel = 0.0001;
+    const touchAccel = 0.0002;
     for (var id in touchState) {
       var touch = touchState[id];
       blue.dx += touchAccel * (touch.x - touch.prevX);
