@@ -28,8 +28,8 @@
     const touchAccel = 0.0001;
     for (var id in touchState) {
       var touch = touchState[id];
-      blue.dx += touchAccel * 3; // (touch.x1 - touch.x0);
-      blue.dy += touchAccel * 4; // (touch.y1 - touch.y0);
+      blue.dx += touchAccel * (touch.x1 - touch.x0);
+      blue.dy += touchAccel * (touch.y1 - touch.y0);
       touch.x0 = touch.x1;
       touch.y0 = touch.y1;
     }
@@ -263,18 +263,23 @@
     event.preventDefault();
     for (var i in event.changedTouches) {
       var t = event.changedTouches[i];
-      switch (event.type) {
-        case 'touchstart':
-          touchstart(t.identifier, t.clientX, t.clientY);
-          break;
-        case 'touchmove':
-          touchmove(t.identifier, t.clientX, t.clientY);
-          break;
-        case 'touchend':
-        case 'touchcancel':
-          touchend(t.identifier, t.clientX, t.clientY);
-          break;
+      for (var p in t) {
+        alert(p + ": " + t[p]);
       }
+      /*
+         switch (event.type) {
+         case 'touchstart':
+         touchstart();
+         break;
+         case 'touchmove':
+         touchmove();
+         break;
+         case 'touchend':
+         case 'touchcancel':
+         touchend();
+         break;
+         }
+         */
     }
   }
 
