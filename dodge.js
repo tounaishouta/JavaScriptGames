@@ -27,13 +27,11 @@
 
     const touchAccel = 0.0001;
     for (var id in touchState) {
-      /*
-         var touch = touchState[id];
-         blue.dx += touchAccel * (touch.x1 - touch.x0);
-         blue.dy += touchAccel * (touch.y1 - touch.y0);
-         touch.x0 = touch.x1;
-         touch.y0 = touch.y1;
-         */
+      var touch = touchState[id];
+      blue.dx += touchAccel * 3; // (touch.x1 - touch.x0);
+      blue.dy += touchAccel * 4; // (touch.y1 - touch.y0);
+      touch.x0 = touch.x1;
+      touch.y0 = touch.y1;
     }
 
     for (var i in reds) {
