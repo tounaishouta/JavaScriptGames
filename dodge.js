@@ -30,10 +30,10 @@
     const touchAccel = 0.0001;
     for (var id in touchState) {
       var touch = touchState[id];
-      blue.dx += touchAccel * (touch.x1 - touch.x0);
-      blue.dy += touchAccel * (touch.y1 - touch.y0);
-      touch.x0 = touch.x1;
-      touch.y0 = touch.y1;
+      blue.dx += touchAccel * (touch.x - touch.prevX);
+      blue.dy += touchAccel * (touch.y - touch.prevY);
+      touch.prevX = touch.x;
+      touch.prevY = touch.y;
     }
 
     for (var i in reds) {
@@ -293,13 +293,13 @@
 
   function touchstart(id, x, y) {
     tap();
-    touchState[id] = { x0: x, y0: y, x1: x, y1: y };
+    touchState[id] = { prevX: x, prevY: y, x: x, y: y };
   }
 
   function touchmove(id, x, y) {
     if (touchState[id]) {
-      touchState[id].x1 = x;
-      touchState[id].y1 = y;
+      touchState[id].x = x;
+      touchState[id].y = y;
     }
   }
 
