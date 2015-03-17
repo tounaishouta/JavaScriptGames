@@ -4,7 +4,7 @@
   const FPS = 25;
   const radius = 0.01;
 
-  var tap = function () {];
+  var tap = function () {};
   var keyState = {};
   var touchState = {};
 
