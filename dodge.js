@@ -4,7 +4,9 @@
   const FPS = 25;
   const radius = 0.01;
 
-  var tap;
+  var tap = function () {];
+  var keyState = {};
+  var touchState = {};
 
   setTimeout(begin, 0);
 
@@ -250,15 +252,11 @@
     return new Date().getTime();
   }
 
-  var keyState = {};
-
   function keyEventHandler(event) {
     var keydown = event.type === 'keydown';
     if (keydown) { tap(); }
     keyState[event.keyCode] = keydown;
   }
-
-  var touchState = {};
 
   function touchEventHandler(event) {
     event.preventDefault();
@@ -295,7 +293,7 @@
 
   function touchstart(id, x, y) {
     tap();
-    touchState[id] = { x0: x, y0: y, x1: x, y1: y }
+    touchState[id] = { x0: x, y0: y, x1: x, y1: y };
   }
 
   function touchmove(id, x, y) {
