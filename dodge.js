@@ -30,8 +30,8 @@
     const touchAccel = 0.0001;
     for (var id in touchState) {
       var touch = touchState[id];
-      blue.dx += touchAccel * 1; // (touch.x - touch.prevX);
-      blue.dy += touchAccel * 4; // (touch.y - touch.prevY);
+      blue.dx += touchAccel (touch.x - touch.prevX);
+      blue.dy += touchAccel (touch.y - touch.prevY);
       touch.prevX = touch.x;
       touch.prevY = touch.y;
     }
@@ -260,7 +260,7 @@
 
   function touchEventHandler(event) {
     event.preventDefault();
-    for (var i in event.changedTouches) {
+    for (var i = 0; i < event.changedTouches.length; i++) {
       var t = event.changedTouches[i];
       switch (event.type) {
         case 'touchstart':
