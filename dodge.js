@@ -1,6 +1,6 @@
 (function () {
 
-  const version = 11;
+  const version = '8.2';
   const FPS = 25;
   const radius = 0.01;
 
@@ -30,8 +30,8 @@
     const touchAccel = 0.0001;
     for (var id in touchState) {
       var touch = touchState[id];
-      blue.dx += touchAccel (touch.x - touch.prevX);
-      blue.dy += touchAccel (touch.y - touch.prevY);
+      blue.dx += touchAccel * (touch.x - touch.prevX);
+      blue.dy += touchAccel * (touch.y - touch.prevY);
       touch.prevX = touch.x;
       touch.prevY = touch.y;
     }
@@ -91,7 +91,7 @@
           canvas.width / 2, (0.5 / 10) * canvas.height, canvas.width);
       for (var j = 1; j <= 9; j++) {
         context.fillStyle = j == i ? '#ff0000' : '#000000';
-        context.fillText(j + '. ' + fill(toSecond(r[j]), 7),
+        context.fillText(j + fill(toSecond(r[j]), 9),
             canvas.width / 2, ((j + 0.5) / 10) * canvas.height, canvas.width);
       }
 
@@ -157,7 +157,7 @@
     context.font = Math.floor(scale / 20) + 'px Courier, monospace';
     context.textAlign = 'left';
     context.textBaseline = 'bottom';
-    context.fillText('ver.' + version, 0, canvas.height);
+    context.fillText('ver ' + version, 0, canvas.height);
 
     context.font = Math.floor(scale / 10) + 'px Courier, monospace';
     context.textAlign = 'center';
