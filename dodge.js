@@ -1,10 +1,10 @@
 (function () {
 
-  const version = '8.3';
+  const version = '8.4';
   const FPS = 25;
   const radius = 0.01;
 
-  var tap = function () {};
+  var ontap = function () {};
   var keyState = {};
   var touchState = {};
 
@@ -16,22 +16,22 @@
     reds.push(new Ball('#ff0000', -1, 0, -0.3, -0.3));
     reds.push(new Ball('#ff0000', -1, 0, +0.3, +0.3));
     draw('begin', 0, blue, reds);
-    tap = function() { main(now(), 0, blue, reds); };
+    ontap = function () { main(now(), 0, blue, reds); };
   }
 
   function main(time, frame, blue, reds) {
 
-    const keyAccel = 0.003;
-    if (keyState[37]) { blue.dx -= keyAccel; }
-    if (keyState[38]) { blue.dy -= keyAccel; }
-    if (keyState[39]) { blue.dx += keyAccel; }
-    if (keyState[40]) { blue.dy += keyAccel; }
+    const accelRate = 0.004;
+    if (keyState[37]) { blue.dx -= accelRate; }
+    if (keyState[38]) { blue.dy -= accelRate; }
+    if (keyState[39]) { blue.dx += accelRate; }
+    if (keyState[40]) { blue.dy += accelRate; }
 
-    const touchAccel = 0.0002;
+    const touchRatio = 20;
     for (var id in touchState) {
       var touch = touchState[id];
-      blue.dx += touchAccel * (touch.x - touch.prevX);
-      blue.dy += touchAccel * (touch.y - touch.prevY);
+      blue.dx += accelRate * normalize((touch.x - touch.prevX) / touchRatio);
+      blue.dy += accelRate * normalize((touch.y - touch.prevY) / touchRatio);
       touch.prevX = touch.x;
       touch.prevY = touch.y;
     }
@@ -59,53 +59,47 @@
       setTimeout(main, time - now(), time, frame, blue, reds);
     }
 
-    tap = function () {};
+    ontap = function () {};
   }
 
   function end(frame, blue, reds) {
     draw('end', frame, blue, reds);
     var i = addRanking(frame);
-    tap = function () {};
-    setTimeout(function() { tap = ranking(i); }, 1000);
+    ontap = function () {};
+    setTimeout(function () { ontap = function () { ranking(i); }; }, 1000);
   }
 
   function ranking(i) {
-    return function() {
 
-      var r = getRanking();
+    ontap = function () {};
 
-      var canvas = document.getElementById('canvas');
-      canvas.height = canvas.clientHeight;
-      canvas.width = canvas.clientWidth;
+    var r = getRanking();
 
-      var context = canvas.getContext('2d');
+    var canvas = document.getElementById('canvas');
+    canvas.height = canvas.clientHeight;
+    canvas.width = canvas.clientWidth;
 
-      context.fillStyle = '#aaaaaa';
-      context.fillRect(0, 0, canvas.width, canvas.height);
+    var context = canvas.getContext('2d');
 
-      context.font = Math.floor(canvas.height / 10 * 0.8) + 'px Courier, monospace';
-      context.textAlign = 'center';
-      context.textBaseline = 'middle';
-      context.fillStyle = '#000000';
-      context.fillText('Ranking',
-          canvas.width / 2, (0.5 / 10) * canvas.height, canvas.width);
-      for (var j = 1; j <= 9; j++) {
-        context.fillStyle = j == i ? '#ff0000' : '#000000';
-        context.fillText(j + fill(toSecond(r[j]), 9),
-            canvas.width / 2, ((j + 0.5) / 10) * canvas.height, canvas.width);
-      }
+    context.fillStyle = '#aaaaaa';
+    context.fillRect(0, 0, canvas.width, canvas.height);
 
-      tap = function() {};
-      setTimeout(function() { tap = begin; }, 1000);
-    };
+    context.font = Math.floor(canvas.height / 10 * 0.8) + 'px Courier, monospace';
+    context.textAlign = 'center';
+    context.textBaseline = 'middle';
+    context.fillStyle = '#000000';
+    context.fillText('Ranking', canvas.width / 2, (0.5 / 10) * canvas.height, canvas.width);
+    for (var j = 1; j <= 9; j++) {
+      context.fillStyle = j == i ? '#ff0000' : '#000000';
+      var mess = String(j) + fill(toSecond(r[j]), 9);
+      context.fillText(mess , canvas.width / 2, ((j + 0.5) / 10) * canvas.height, canvas.width);
+    }
+
+    setTimeout(function () { ontap = begin; }, 1000);
   }
 
   function addRanking(frame) {
     var r = getRanking();
-    if (r === null) {
-      r = [];
-      for (var i = 1; i <= 9; i++) { r[i] = 0; }
-    }
     var i = 1;
     while (i <= 9 && r[i] > frame) { i++; }
     if (i <= 9) {
@@ -117,11 +111,17 @@
   }
 
   function getRanking() {
-    return JSON.parse(localStorage.getItem('dodge'));
+    if (localStorage.getItem('dodge.version') !== version) {
+      var r = [];
+      for (var i = 1; i <= 9; i++) { r[i] = 0; }
+      return r;
+    }
+    return JSON.parse(localStorage.getItem('dodge.ranking'));
   }
 
   function setRanking(r) {
-    localStorage.setItem('dodge', JSON.stringify(r));
+    localStorage.setItem('dodge.version', version);
+    localStorage.setItem('dodge.ranking', JSON.stringify(r));
   }
 
   function draw(mode, frame, blue, reds) {
@@ -208,42 +208,66 @@
   }
 
   function coulomb(a, b) {
-    if (a.activate === 0 && b.activate === 0) {
-      var x = 2 * Math.PI * (a.x - b.x);
-      var y = 2 * Math.PI * (a.y - b.y);
-      var r = Math.sqrt(2 - Math.cos(x) - Math.cos(y));
-      if (r > 0) {
-        const k = 0.0008;
-        const e = 0.1;
-        a.dx += k * a.charge * b.charge * Math.sin(x) / r / (r * r + e);
-        a.dy += k * a.charge * b.charge * Math.sin(y) / r / (r * r + e);
-      }
+    if (a.activate > 0 || b.activate > 0) { return; }
+    var x = 2 * Math.PI * (a.x - b.x);
+    var y = 2 * Math.PI * (a.y - b.y);
+    var r = Math.sqrt(2 - Math.cos(x) - Math.cos(y));
+    if (r > 0) {
+      const k = 0.0008;
+      const e = 0.1;
+      a.dx += k * a.charge * b.charge * Math.sin(x) / r / (r * r + e);
+      a.dy += k * a.charge * b.charge * Math.sin(y) / r / (r * r + e);
     }
   }
 
   function isCaught(a, b) {
-    if (a.activate === 0 && b.activate === 0) {
-      var x = a.x - b.x;
-      x = Math.min(Math.abs(x), 1 - Math.abs(x));
-      var y = a.y - b.y;
-      y = Math.min(Math.abs(y), 1 - Math.abs(y));
-      return x * x + y * y <= (2 * radius) * (2 * radius);
+    if (a.activate > 0 || b.activate > 0) { return false; }
+    var D = (2 * radius) * (2 * radius);
+    var dx = a.dx - b.dx;
+    var dy = a.dy - b.dy;
+    var A = dx * dx + dy * dy;
+    for (var i = -1; i <= +1; i++) {
+      for (var j = -1; j <= +1; j++) {
+        var x = a.x - b.x + i;
+        var y = a.y - b.y + j;
+        var B = dx * x + dy * y;
+        var C = x * x + y * y;
+        var t = B / A;
+        if (A == 0 || B <= 0) {
+          if (C <= D) {
+            return true;
+          }
+        }
+        else if (t < 1) {
+          if (C - B * B / A <= D) {
+            a.x -= t * a.dx;
+            a.y -= t * a.dy;
+            b.x -= t * b.dx;
+            b.y -= t * b.dy;
+            return true;
+          }
+        }
+      }
     }
-    else { return false; }
+    return false;
+  }
+
+  function normalize(x) {
+    return Math.min(+1, Math.max(-1, x));
   }
 
   function toSecond(frame) {
     var t = frame / FPS;
     var s = '';
-    s += Math.floor(t);
+    s += String(Math.floor(t));
     s += '.';
-    s += Math.floor(t * 10) % 10;
-    s += Math.round(t * 100) % 10;
+    s += String(Math.floor(t * 10) % 10);
+    s += String(Math.round(t * 100) % 10);
     s += 's';
     return s;
   }
 
-  function fill (s, width) {
+  function fill(s, width) {
     while (s.length < width) { s = ' ' + s; }
     return s;
   }
@@ -254,8 +278,8 @@
 
   function keyEventHandler(event) {
     var keydown = event.type === 'keydown';
-    if (keydown) { tap(); }
     keyState[event.keyCode] = keydown;
+    if (keydown) { setTimeout(ontap, 0); }
   }
 
   function touchEventHandler(event) {
@@ -292,8 +316,8 @@
   }
 
   function touchstart(id, x, y) {
-    tap();
     touchState[id] = { prevX: x, prevY: y, x: x, y: y };
+    setTimeout(ontap, 0);
   }
 
   function touchmove(id, x, y) {
