@@ -1,3 +1,5 @@
+"use strict";
+
 (function () {
 
   const version = '8.4';
@@ -21,20 +23,23 @@
 
   function main(time, frame, blue, reds) {
 
-    const accelRate = 0.004;
-    if (keyState[37]) { blue.dx -= accelRate; }
-    if (keyState[38]) { blue.dy -= accelRate; }
-    if (keyState[39]) { blue.dx += accelRate; }
-    if (keyState[40]) { blue.dy += accelRate; }
-
+    var a = { x: 0, y: 0};
+    if (keyState[37]) { a.x--; }
+    if (keyState[38]) { a.y--; }
+    if (keyState[39]) { a.x++; }
+    if (keyState[40]) { a.y++; }
     const touchRatio = 20;
     for (var id in touchState) {
-      var touch = touchState[id];
-      blue.dx += accelRate * normalize((touch.x - touch.prevX) / touchRatio);
-      blue.dy += accelRate * normalize((touch.y - touch.prevY) / touchRatio);
-      touch.prevX = touch.x;
-      touch.prevY = touch.y;
+      var t = touchState[id];
+      a.x += (t.x - t.prevX) / touchRatio;
+      a.y += (t.y - t.prevY) / touchRatio;
+      t.prevX = t.x;
+      t.prevY = t.y;
     }
+    const accelRate = 0.004;
+    normalize(a, accelRate);
+    blue.dx += a.x;
+    blue.dy += a.y;
 
     for (var i in reds) {
       coulomb(reds[i], blue);
@@ -252,8 +257,12 @@
     return false;
   }
 
-  function normalize(x) {
-    return Math.min(+1, Math.max(-1, x));
+  function normalize(v, n) {
+    var r = Math.sqrt(v.x * v.x + v.y * v.y);
+    if (r > n) {
+      v.x *= n / r;
+      v.y *= n / r;
+    }
   }
 
   function toSecond(frame) {
