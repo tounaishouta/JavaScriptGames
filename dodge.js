@@ -2,7 +2,7 @@
 
 (function () {
 
-  const version = '8.4';
+  const version = '8.5';
   const FPS = 25;
   const radius = 0.01;
 
