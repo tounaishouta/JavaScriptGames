@@ -1,5 +1,4 @@
 (function () {
-  "use strict";
 
   const version = '8.5';
   const FPS = 25;
