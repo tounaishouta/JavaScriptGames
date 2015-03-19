@@ -1,6 +1,6 @@
 (function () {
 
-  const version = '8.5';
+  const version = '8.6';
   const FPS = 25;
   const radius = 0.01;
 
@@ -26,7 +26,7 @@
     if (keyState[38]) { a.y--; }
     if (keyState[39]) { a.x++; }
     if (keyState[40]) { a.y++; }
-    const touchRatio = 20;
+    const touchRatio = 100;
     for (var id in touchState) {
       var t = touchState[id];
       a.x += (t.x - t.prevX) / touchRatio;
