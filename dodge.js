@@ -26,7 +26,7 @@
     if (keyState[38]) { a.y--; }
     if (keyState[39]) { a.x++; }
     if (keyState[40]) { a.y++; }
-    const touchRatio = 100;
+    const touchRatio = 200;
     for (var id in touchState) {
       var t = touchState[id];
       a.x += (t.x - t.prevX) / touchRatio;
