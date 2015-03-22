@@ -2,11 +2,11 @@
 
   setTimeout(newGame);
 
-  const version = '3.0';
+  const version = '3.1';
 
   const colors = ['#f00', '#0f0', '#00f', '#ff0', '#f0f', '#0ff'];
 
-  const FPS = 10;
+  const FPS = 20;
 
   const width  = 5;
   const height = 10;
@@ -383,9 +383,10 @@
         writeText(String(score) + 'pt', '#000', 0.7, 'right', 'middle', (width + 2) * scale, 0);
 
         if (mode === 'newGame' || mode === 'gameOver') {
-          context.setTransform(1, 0, 0, 1, canvas.width / 2, canvas.height / 2);
+          context.setTransform(1, 0, 0, 1, offsetX, canvas.height / 2);
           context.fillStyle = '#fff';
-          context.fillRect(- width * scale / 2, - scale / 2, width * scale, scale);
+          context.fillRect(0, - scale / 2, width * scale, scale);
+          context.setTransform(1, 0, 0, 1, canvas.width / 2, canvas.height / 2);
           writeText(mode === 'newGame' ? 'Tap to Start' : 'Game Over',
               '#000', 0.7, 'center', 'middle', 0, 0, width * scale);
         }
