@@ -1,8 +1,15 @@
 (function () {
+  'use strict';
 
-  const version = '8.6';
-  const FPS = 25;
-  const radius = 0.01;
+  var version = '8.6';
+  var FPS = 25;
+  var radius = 0.01;
+
+  var friction = -2;
+  var coulombConst = 0.0008;
+  var epsilon = 0.1;
+  var accelRate = 0.004;
+  var touchRatio = 200;
 
   var ontap = function () {};
   var keyState = {};
@@ -26,7 +33,6 @@
     if (keyState[38]) { a.y--; }
     if (keyState[39]) { a.x++; }
     if (keyState[40]) { a.y++; }
-    const touchRatio = 200;
     for (var id in touchState) {
       var t = touchState[id];
       a.x += (t.x - t.prevX) / touchRatio;
@@ -34,7 +40,6 @@
       t.prevX = t.x;
       t.prevY = t.y;
     }
-    const accelRate = 0.004;
     normalize(a, accelRate);
     blue.dx += a.x;
     blue.dy += a.y;
@@ -92,7 +97,7 @@
     context.textBaseline = 'middle';
     context.fillStyle = '#000000';
     context.fillText('Ranking', canvas.width / 2, (0.5 / 10) * canvas.height, canvas.width);
-    for (var j = 1; j <= 9; j++) {
+    for (var j = 1; j <= 9 && r[j] !== false; j++) {
       context.fillStyle = j == i ? '#ff0000' : '#000000';
       var mess = String(j) + fill(toSecond(r[j]), 9);
       context.fillText(mess , canvas.width / 2, ((j + 0.5) / 10) * canvas.height, canvas.width);
@@ -104,7 +109,7 @@
   function addRanking(frame) {
     var r = getRanking();
     var i = 1;
-    while (i <= 9 && r[i] > frame) { i++; }
+    while (i <= 9 && r[i] !== false && r[i] > frame) { i++; }
     if (i <= 9) {
       for (var j = 9; j > i; j--) { r[j] = r[j - 1]; }
       r[i] = frame;
@@ -114,12 +119,11 @@
   }
 
   function getRanking() {
-    if (localStorage.getItem('dodge.version') !== version) {
-      var r = [];
-      for (var i = 1; i <= 9; i++) { r[i] = 0; }
-      return r;
-    }
-    return JSON.parse(localStorage.getItem('dodge.ranking'));
+    if (localStorage.getItem('dodge.version') === version)
+      return JSON.parse(localStorage.getItem('dodge.ranking'));
+    var r = [];
+    for (var i = 1; i <= 9; i++) { r[i] = false; }
+    return r;
   }
 
   function setRanking(r) {
@@ -199,10 +203,9 @@
   function update(ball) {
     if (ball.activate > 0) { ball.activate--; }
     else {
-      const c = -2;
       var v = Math.sqrt(ball.dx * ball.dx + ball.dy * ball.dy);
-      ball.dx *= Math.exp(c * v);
-      ball.dy *= Math.exp(c * v);
+      ball.dx *= Math.exp(friction * v);
+      ball.dy *= Math.exp(friction * v);
       ball.x += ball.dx;
       ball.y += ball.dy;
       ball.x -= Math.round(ball.x);
@@ -216,10 +219,8 @@
     var y = 2 * Math.PI * (a.y - b.y);
     var r = Math.sqrt(2 - Math.cos(x) - Math.cos(y));
     if (r > 0) {
-      const k = 0.0008;
-      const e = 0.1;
-      a.dx += k * a.charge * b.charge * Math.sin(x) / r / (r * r + e);
-      a.dy += k * a.charge * b.charge * Math.sin(y) / r / (r * r + e);
+      a.dx += coulombConst * a.charge * b.charge * Math.sin(x) / r / (r * r + epsilon);
+      a.dy += coulombConst * a.charge * b.charge * Math.sin(y) / r / (r * r + epsilon);
     }
   }
 
