@@ -1,30 +1,31 @@
 (function () {
+  'use strict';
 
   setTimeout(newGame);
 
-  const version = '3.1';
+  var version = '3.1';
 
-  const colors = ['#f00', '#0f0', '#00f', '#ff0', '#f0f', '#0ff'];
+  var colors = ['#f00', '#0f0', '#00f', '#ff0', '#f0f', '#0ff'];
 
-  const FPS = 20;
+  var FPS = 20;
 
-  const width  = 5;
-  const height = 10;
+  var width  = 5;
+  var height = 10;
 
-  const initialHeight = 5;
+  var initialHeight = 5;
 
-  const fallSpeed = 1 / 4;
-  const slideSpeed = 1 / 2;
-  const pushSpeed = 1 / 2;
+  var fallSpeed = 1 / 4;
+  var slideSpeed = 1 / 2;
+  var pushSpeed = 1 / 2;
 
-  const dropUnit = 30 * FPS;
-  const dropRate = function () { return 30 + level(); };
+  var dropUnit = 30 * FPS;
+  var dropRate = function () { return 30 + level(); };
 
-  const disappLength = 4;
-  const disappTime   = 8;
+  var disappLength = 4;
+  var disappTime   = 8;
 
-  const level = function () { return Math.floor(erased / 16) + 1; };
-  const point = function () { return combo * level(); };
+  var level = function () { return Math.floor(erased / 16) + 1; };
+  var point = function () { return combo * level(); };
 
   var mode, tube, erased, score, combo, dropTime, time, disabled;
 
