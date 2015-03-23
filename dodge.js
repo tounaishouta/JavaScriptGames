@@ -1,7 +1,7 @@
 (function () {
   'use strict';
 
-  var version = '8.6';
+  var version = '8.8';
   var FPS = 25;
   var radius = 0.01;
 
@@ -9,7 +9,7 @@
   var coulombConst = 0.0008;
   var epsilon = 0.1;
   var accelRate = 0.004;
-  var touchRatio = 200;
+  var touchRatio = 10;
 
   var ontap = function () {};
   var keyState = {};
@@ -40,9 +40,9 @@
       t.prevX = t.x;
       t.prevY = t.y;
     }
-    normalize(a, accelRate);
-    blue.dx += a.x;
-    blue.dy += a.y;
+    normalize(a);
+    blue.dx += accelRate * a.x;
+    blue.dy += accelRate * a.y;
 
     for (var i in reds) {
       coulomb(reds[i], blue);
@@ -256,11 +256,11 @@
     return false;
   }
 
-  function normalize(v, n) {
+  function normalize(v) {
     var r = Math.sqrt(v.x * v.x + v.y * v.y);
-    if (r > n) {
-      v.x *= n / r;
-      v.y *= n / r;
+    if (r > 1) {
+      v.x /= r;
+      v.y /= r;
     }
   }
 
