@@ -3,25 +3,45 @@
 
   setTimeout(newGame);
 
-  // example
-  /*
-  var generateArray = [];
-  for (var i = 0; i < 100; i++) {
-    generateArray.push({ x: 0.5, y: 0.5 });
-  }
-
-  var controlArray = [];
-  for (var i = 0; i < 1000; i++) {
-    controlArray.push({ x: Math.cos(i / 6), y: -Math.cos(i / 6) });
-  }
-
-  setTimeout(function () {
-    var generate = generateFromArray(generateArray);
-    var control  = controlFromArray(controlArray);
-    console.log(toSecond(evaluate(generate, control)));
-    replay(generate, control);
-  });
-  */
+  /* example */
+  // setTimeout(function() {
+  //
+  //   var length = 100 * FPS;
+  //
+  //   var generateArray = [];
+  //   for (var i = 0; i < length / (5 * FPS); i++) {
+  //     generateArray.push({ x: Math.random() - 0.5, y: Math.random() - 0.5 });
+  //   }
+  //   var generate = generateFromArray(generateArray);
+  //
+  //   var controlArray = [];
+  //   var theta = 3 / 4 * Math.PI;
+  //   for (var i = 0; i < length; i++) {
+  //     controlArray.push({ theta: theta, x: Math.cos(theta), y: Math.sin(theta) });
+  //   }
+  //
+  //   var backFrame = FPS;
+  //   var dtheta    = Math.PI / 4;
+  //   var countMax  = 200;
+  //
+  //   for (var count = 0; count < countMax; count++) {
+  //     var f  = evaluate(generate, controlFromArray(controlArray));
+  //     var theta = controlArray[f].theta + dtheta;
+  //     for (var i = f - backFrame; i < length; i++) {
+  //       controlArray[i].theta = theta;
+  //       controlArray[i].x     = Math.cos(theta);
+  //       controlArray[i].y     = Math.sin(theta);
+  //     }
+  //   }
+  //
+  //   console.log('coumputed!', toSecond(evaluate(generate, controlFromArray(controlArray))));
+  //
+  //   newGame();
+  //
+  //   setOnTap(function () {
+  //     replay(generate, controlFromArray(controlArray));
+  //   });
+  // });
 
   var version = '9.0';
 
