@@ -6,12 +6,14 @@
   // example
   /*
   var generateArray = [];
-  for (var i = 0; i < 100; i++)
+  for (var i = 0; i < 100; i++) {
     generateArray.push({ x: 0.5, y: 0.5 });
+  }
 
   var controlArray = [];
-  for (var i = 0; i < 1000; i++)
+  for (var i = 0; i < 1000; i++) {
     controlArray.push({ x: Math.cos(i / 6), y: -Math.cos(i / 6) });
+  }
 
   setTimeout(function () {
     var generate = generateFromArray(generateArray);
@@ -36,13 +38,10 @@
   function evaluate(generate, control) {
     initialize();
     while (true) {
-      if (!generate())
-        return frame;
-      if (!control())
-        return frame;
+      if (!generate()) { return frame; }
+      if (!control()) { return frame; }
       update();
-      if (isGameOver())
-        return frame;
+      if (isGameOver()) { return frame; }
     }
   }
 
@@ -75,10 +74,8 @@
     return function () {
       if ((frame + FPS) % (5 * FPS) === 0) {
         var coord = array[(frame + FPS) / (5 * FPS)];
-        if (coord)
-          reds.push(new Ball('#f00', -1, FPS, coord.x, coord.y));
-        else
-          return false;
+        if (!coord) { return false; }
+        reds.push(new Ball('#f00', -1, FPS, coord.x, coord.y));
       }
       return true;
     };
@@ -87,8 +84,7 @@
   function controlFromArray(array) {
     return function () {
       var accel = array[frame];
-      if (!accel)
-        return false;
+      if (!accel) { return false; }
       var r = Math.sqrt(accel.x * accel.x + accel.y * accel.y);
       if (r > 1) {
         accel.x /= r;
@@ -117,29 +113,24 @@
     mode = 'main';
     draw();
     time += 1000 / FPS;
-    if (isGameOver())
-      setTimeout(gameOver);
-    else
-      setTimeout(main, time - now());
+    if (isGameOver()) { setTimeout(gameOver); }
+    else { setTimeout(main, time - now()); }
     setOnTap(function () {});
   }
 
   function defaultGenerate() {
-    if ((frame + FPS) % (FPS * 5) === 0)
+    if ((frame + FPS) % (FPS * 5) === 0) {
       reds.push(new Ball('#f00', -1, FPS, Math.random() - 0.5, Math.random() - 0.5));
+    }
   }
 
   function defaultControl() {
     var ddx = 0;
     var ddy = 0;
-    if (keyState[37])
-      ddx--;
-    if (keyState[38])
-      ddy--;
-    if (keyState[39])
-      ddx++;
-    if (keyState[40])
-      ddy++;
+    if (keyState[37]) { ddx--; }
+    if (keyState[38]) { ddy--; }
+    if (keyState[39]) { ddx++; }
+    if (keyState[40]) { ddy++; }
     for (var id in touchState) {
       var t = touchState[id];
       ddx += (t.x - t.x0) / touchRatio;
@@ -183,8 +174,9 @@
     while (rankOrder <= 9 && rankData[rankOrder] !== false && rankData[rankOrder] > frame)
       rankOrder++;
     if (rankOrder <= 9) {
-      for (var i = 9; i > rankOrder; i--)
+      for (var i = 9; i > rankOrder; i--) {
         rankData[i] = rankData[i - 1];
+      }
       rankData[rankOrder] = frame;
     }
     setRanking();
@@ -196,8 +188,9 @@
     }
     else {
       rankData = [];
-      for (var i = 1; i <= 9; i++)
+      for (var i = 1; i <= 9; i++) {
         rankData[i] = false;
+      }
     }
   }
 
@@ -209,10 +202,8 @@
   var ontap = function () {};
 
   function setOnTap(f, delay) {
-    if (delay)
-      setTimeout(function () { ontap = f; }, delay);
-    else
-      ontap = f;
+    if (delay) { setTimeout(function () { ontap = f; }, delay); }
+    else { ontap = f; }
   }
 
   function initialize() {
@@ -262,8 +253,7 @@
   }
 
   function coulomb(a, b) {
-    if (a.wait > 0 || b.wait > 0)
-      return;
+    if (a.wait > 0 || b.wait > 0) { return; }
     var x = 2 * Math.PI * (a.x - b.x);
     var y = 2 * Math.PI * (a.y - b.y);
     var r = Math.sqrt(2 - Math.cos(x) - Math.cos(y));
@@ -274,8 +264,7 @@
   }
 
   function isCaught(a, b) {
-    if (a.wait > 0 || b.wait > 0)
-      return false;
+    if (a.wait > 0 || b.wait > 0) { return false; }
     var D = (2 * radius) * (2 * radius);
     var dx = a.dx - b.dx;
     var dy = a.dy - b.dy;
@@ -286,8 +275,7 @@
         var y = a.y - b.y + j;
         var B = dx * x + dy * y;
         var C = x * x + y * y;
-        if (B <= 0 && C <= D)
-          return true;
+        if (B <= 0 && C <= D) { return true; }
         if (0 < B && B < A && C - B * B / A <= D) {
           var t = B / A;
           a.x -= t * a.dx;
@@ -394,8 +382,7 @@
   function keyEventHandler(event) {
     var keydown = event.type === 'keydown';
     keyState[event.keyCode] = keydown;
-    if (keydown)
-      setTimeout(ontap);
+    if (keydown) { setTimeout(ontap); }
   }
 
   var touchState = {};
@@ -413,8 +400,7 @@
   }
 
   function touchend(id) {
-    if (touchState[id])
-      delete touchState[id];
+    if (touchState[id]) { delete touchState[id]; }
   }
 
   addEventListener('mousedown', mouseEventHandler);
