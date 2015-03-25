@@ -3,45 +3,74 @@
 
   setTimeout(newGame);
 
-  /* example */
-  // setTimeout(function() {
-  //
-  //   var length = 100 * FPS;
-  //
-  //   var generateArray = [];
-  //   for (var i = 0; i < length / (5 * FPS); i++) {
-  //     generateArray.push({ x: Math.random() - 0.5, y: Math.random() - 0.5 });
-  //   }
-  //   var generate = generateFromArray(generateArray);
-  //
-  //   var controlArray = [];
-  //   var theta = 3 / 4 * Math.PI;
-  //   for (var i = 0; i < length; i++) {
-  //     controlArray.push({ theta: theta, x: Math.cos(theta), y: Math.sin(theta) });
-  //   }
-  //
-  //   var backFrame = FPS;
-  //   var dtheta    = Math.PI / 4;
-  //   var countMax  = 200;
-  //
-  //   for (var count = 0; count < countMax; count++) {
-  //     var f  = evaluate(generate, controlFromArray(controlArray));
-  //     var theta = controlArray[f].theta + dtheta;
-  //     for (var i = f - backFrame; i < length; i++) {
-  //       controlArray[i].theta = theta;
-  //       controlArray[i].x     = Math.cos(theta);
-  //       controlArray[i].y     = Math.sin(theta);
-  //     }
-  //   }
-  //
-  //   console.log('coumputed!', toSecond(evaluate(generate, controlFromArray(controlArray))));
-  //
-  //   newGame();
-  //
-  //   setOnTap(function () {
-  //     replay(generate, controlFromArray(controlArray));
-  //   });
-  // });
+  // setTimeout(demo2);
+
+  function demo1() {
+
+    var length = 100 * FPS;
+
+    var generateArray = [];
+    for (var i = 0; i < length / (5 * FPS); i++) {
+      generateArray.push({ x: Math.random() - 0.5, y: Math.random() - 0.5 });
+    }
+    var generate = generateFromArray(generateArray);
+
+    var controlArray = [];
+    var theta = 3 / 4 * Math.PI;
+    for (var i = 0; i < length; i++) {
+      controlArray.push({ theta: theta, x: Math.cos(theta), y: Math.sin(theta) });
+    }
+
+    var backFrame = FPS;
+    var dtheta    = Math.PI / 4;
+    var countMax  = 20;
+
+    for (var count = 0; count < countMax; count++) {
+      var f  = evaluate(generate, controlFromArray(controlArray));
+      var theta = controlArray[f].theta + dtheta;
+      for (var i = f - backFrame; i < length; i++) {
+        controlArray[i].theta = theta;
+        controlArray[i].x     = Math.cos(theta);
+        controlArray[i].y     = Math.sin(theta);
+      }
+    }
+
+    console.log('coumputed!', toSecond(evaluate(generate, controlFromArray(controlArray))));
+
+    replay(generate, controlFromArray(controlArray));
+  }
+
+  function demo2() {
+    replay(defaultGenerate, function () {
+      var x0, y0, r0, dx, dy;
+      r0 = Infinity;
+      reds.forEach(function (red) {
+        for (var i = -1; i <= 1; i++) {
+          for (var j = -1; j <= 1; j++) {
+            var x = red.x - blue.x + i;
+            var y = red.y - blue.y + j;
+            var r = Math.sqrt(x * x + y * y);
+            if (r < r0) {
+              x0 = x;
+              y0 = y;
+              r0 = r;
+              dx = red.dx - blue.dx;
+              dy = red.dy - blue.dy;
+            }
+          }
+        }
+      });
+      if (dx * y0 - dy * x0 > 0) {
+        blue.dx -= accelRate * y0 / r0;
+        blue.dy += accelRate * x0 / r0;
+      }
+      else {
+        blue.dx += accelRate * y0 / r0;
+        blue.dy -= accelRate * x0 / r0;
+      }
+      return true;
+    });
+  }
 
   var version = '9.0';
 
@@ -53,7 +82,7 @@
   var accelRate = 0.004;
   var touchRatio = 10;
 
-  var frame, blue, reds, mode, time;
+  var frame, blue, reds, mode, time, intervalID;
 
   function evaluate(generate, control) {
     initialize();
@@ -67,27 +96,33 @@
 
   function replay(generate, control) {
     initialize();
-    var intervalID = setInterval(function () {
-      if (!generate()) {
-        clearInterval(intervalID);
-        console.log('generate is undefined at frame = %i', frame);
-        return;
-      }
-      if (!control()) {
-        clearInterval(intervalID);
-        console.log('control is undefined at frame = %i', frame);
-        return;
-      }
-      update();
-      mode = 'main';
-      draw();
-      if (isGameOver()) {
-        clearInterval(intervalID);
-        mode = 'gameOver';
+    mode = 'newGame';
+    draw();
+    setOnTap(function () {
+      initialize();
+      if (intervalID) { clearInterval(intervalID); }
+      intervalID = setInterval(function () {
+        if (!generate()) {
+          clearInterval(intervalID);
+          console.log('generate is undefined at frame = %i', frame);
+          return;
+        }
+        if (!control()) {
+          clearInterval(intervalID);
+          console.log('control is undefined at frame = %i', frame);
+          return;
+        }
+        update();
+        mode = 'main';
         draw();
-        return;
-      }
-    }, 1000 / FPS);
+        if (isGameOver()) {
+          clearInterval(intervalID);
+          mode = 'gameOver';
+          draw();
+          return;
+        }
+      }, 1000 / FPS);
+    });
   }
 
   function generateFromArray(array) {
@@ -142,6 +177,7 @@
     if ((frame + FPS) % (FPS * 5) === 0) {
       reds.push(new Ball('#f00', -1, FPS, Math.random() - 0.5, Math.random() - 0.5));
     }
+    return true;
   }
 
   function defaultControl() {
@@ -165,6 +201,7 @@
     }
     blue.dx += accelRate * ddx;
     blue.dy += accelRate * ddy;
+    return true;
   }
 
   function now() {
