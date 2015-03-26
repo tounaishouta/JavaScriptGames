@@ -254,9 +254,14 @@ touchEventHandler = (event) ->
         touchstart(t.identifier, t.clientX, t.clientY)
       when "touchmove"
         touchmove(t.identifier, t.clientX, t.clientY)
-      when "touchend"
+      when "touchend", "touchcancel"
         touchend(t.identifier)
   return
+
+addEventListener("touchstart", touchEventHandler)
+addEventListener("touchmove", touchEventHandler)
+addEventListener("touchend", touchEventHandler)
+addEventListener("touchcancel", touchEventHandler)
 
 rankMax = 10
 rankData = rankOrder = null
