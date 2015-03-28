@@ -360,7 +360,7 @@
     getRanking();
     rankOrd = 1;
     while (rankOrd <= height && (rankData[rankOrd] != null) && rankData[rankOrd] > score) {
-      rankData++;
+      rankOrd++;
     }
     if (rankOrd <= height) {
       for (i = j = ref = height, ref1 = rankOrd; ref <= ref1 ? j < ref1 : j > ref1; i = ref <= ref1 ? ++j : --j) {

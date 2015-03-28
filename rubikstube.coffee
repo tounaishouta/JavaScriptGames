@@ -231,7 +231,7 @@ addRanking = ->
   getRanking()
   rankOrd = 1
   while rankOrd <= height and rankData[rankOrd]? and rankData[rankOrd] > score
-    rankData++
+    rankOrd++
   if rankOrd <= height
     for i in [height ... rankOrd]
       rankData[i] = rankData[i - 1]
