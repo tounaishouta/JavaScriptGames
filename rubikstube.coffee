@@ -2,7 +2,7 @@
 
 window.onload = -> newGame()
 
-version = "4.0"
+version = "4.1"
 
 colors = ["#f00", "#0f0", "#00f", "#ff0", "#f0f", "#0ff"]
 
@@ -167,7 +167,7 @@ updateDisapp = ->
           )
   return
 
-isGameOver = -> tube.every((col) -> col.every((cube) -> cube.stable))
+isGameOver = -> tube.every((col) -> col.every((cube) -> cube.stable and cube.disapp == 0))
 
 dropables = -> [0 ... width].filter((x) -> not tube[x][0].exists)
 

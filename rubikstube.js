@@ -7,7 +7,7 @@
     return newGame();
   };
 
-  version = "4.0";
+  version = "4.1";
 
   colors = ["#f00", "#0f0", "#00f", "#ff0", "#f0f", "#0ff"];
 
@@ -246,7 +246,7 @@
   isGameOver = function() {
     return tube.every(function(col) {
       return col.every(function(cube) {
-        return cube.stable;
+        return cube.stable && cube.disapp === 0;
       });
     });
   };
