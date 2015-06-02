@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <title>Mandelbrot</title>
+    <style>
+html, body, canvas#canvas {
+  display: block;
+  height: 100%;
+  width: 100%;
+  padding: 0;
+  border: none;
+  margin: 0;
+}
+    </style>
+  </head>
+  <body>
+    <canvas id="canvas"></canvas>
+    <script>
+(function() {
+  'strict';
+
+  const count   = 32;
+  const oneLoop = 10000;
+
+  var canvas = document.getElementById('canvas');
+
+  var width = (canvas.width = canvas.clientWidth);
+  var height = (canvas.height = canvas.clientHeight);
+
+  const centerX = Math.floor(width * 0.75);
+  const centerY = Math.floor(height * 0.5);
+  const scale   = Math.min(width * 0.3, height * 0.4);
+
+  var context = canvas.getContext('2d');
+
+  var dot = function(x, y, color) {
+    context.fillStyle = color;
+    context.fillRect(x, y, 1, 1);
+  };
+
+  var c = function(x0, y0) {
+    var cx = (x0 - centerX) / scale;
+    var cy = (y0 - centerY) / scale;
+    var cr = Math.sqrt(cx * cx + cy * cy);
+    var x = 0, y = 0, r, xx, yy;
+    for (var i = 0; i < count; i++) {
+      r = Math.sqrt(x * x + y * y);
+      if (r * r - r - cr > 1) {
+        var r = Math.floor(i / count * 256);
+        var b = 255 - r;
+        return 'rgb(' + r + ',0,' + b + ')';
+      }
+      xx = x * x - y * y + cx;
+      yy = 2 * x * y + cy;
+      x = xx;
+      y = yy;
+    }
+    return 'rgb(0,0,0)';
+  };
+
+  var loop = function() {
+    var x, y;
+    for (var i = 0; i < oneLoop; i++) {
+      x = Math.floor(Math.random() * width);
+      y = Math.floor(Math.random() * height);
+      dot(x, y, c(x, y));
+    }
+    setTimeout(loop, 0);
+  }
+
+  loop();
+})();
+    </script>
+  </body>
+</html>
