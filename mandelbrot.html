@@ -20,56 +20,54 @@ html, body, canvas#canvas {
 (function() {
   'strict';
 
-  const count   = 32;
-  const oneLoop = 10000;
+  var canvas    = document.getElementById('canvas');
+  canvas.width  = canvas.clientWidth;
+  canvas.height = canvas.clientHeight;
 
-  var canvas = document.getElementById('canvas');
+  var context   = canvas.getContext('2d');
 
-  var width = (canvas.width = canvas.clientWidth);
-  var height = (canvas.height = canvas.clientHeight);
+  const count   = 64;
+  const radius2 = 4;
 
-  const centerX = Math.floor(width * 0.75);
-  const centerY = Math.floor(height * 0.5);
+  const width   = canvas.width;
+  const height  = canvas.height;
   const scale   = Math.min(width * 0.3, height * 0.4);
-
-  var context = canvas.getContext('2d');
+  const centerX = width / 2 + scale * 0.7;
+  const centerY = height / 2;
 
   var dot = function(x, y, color) {
     context.fillStyle = color;
     context.fillRect(x, y, 1, 1);
   };
 
-  var c = function(x0, y0) {
+  var mandelbrot = function(x0, y0) {
     var cx = (x0 - centerX) / scale;
     var cy = (y0 - centerY) / scale;
-    var cr = Math.sqrt(cx * cx + cy * cy);
+    var r0 = 2 + Math.sqrt(Math.sqrt(cx * cx + cy * cy));
     var x = 0, y = 0, r, xx, yy;
     for (var i = 0; i < count; i++) {
-      r = Math.sqrt(x * x + y * y);
-      if (r * r - r - cr > 1) {
-        var r = Math.floor(i / count * 256);
-        var b = 255 - r;
-        return 'rgb(' + r + ',0,' + b + ')';
-      }
       xx = x * x - y * y + cx;
       yy = 2 * x * y + cy;
       x = xx;
       y = yy;
+      if (Math.sqrt(x * x + y * y) > r0) {
+        var r = Math.floor(i / count * 256);
+        var b = 255 - r;
+        return 'rgb(' + r + ',0,' + b + ')';
+      }
     }
     return 'rgb(0,0,0)';
   };
 
-  var loop = function() {
-    var x, y;
-    for (var i = 0; i < oneLoop; i++) {
-      x = Math.floor(Math.random() * width);
-      y = Math.floor(Math.random() * height);
-      dot(x, y, c(x, y));
-    }
-    setTimeout(loop, 0);
+  var loop = function(y) {
+    if (y == height) return;
+    for (var x = 0; x < width; x++)
+      dot(x, y, mandelbrot(x, y));
+    setTimeout(loop, 0, y + 1);
   }
 
-  loop();
+  setTimeout(loop, 0, 0);
+
 })();
     </script>
   </body>
