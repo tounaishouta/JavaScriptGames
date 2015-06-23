@@ -1,179 +1,25 @@
 <!DOCTYPE html>
 <html>
-<head>
-<meta charset="UTF-8">
-<title>Maze</title>
-<script type="text/javascript">
+  <head>
+    <meta http-equiv="content-type" content="text/html; charset=utf-8">
+    <title>Maze</title>
+  </head>
+  <body>
 
-var width,
-    height,
-    maze,
-    mouse,
-    mouse_i,
-    mouse_j,
-    goal_i,
-    goal_j,
-    cellSize = 12,
-    mouseSize = 8,
-    wallWidth = 2;
+    <h1>Maze</h1>
 
-function makeMaze() {
-  width = parseInt(document.getElementById("width").value);
-  height = parseInt(document.getElementById("height").value);
-  maze = new Array(width + 2);
-  for (var i = 0; i < width + 2; i++) {
-    maze[i] = new Array(height + 2);
-    for (var j = 0; j < height + 2; j++) {
-      maze[i][j] = new Object();
-      maze[i][j].left = (i > 0 && j !== 0 && j !== height + 1);
-      maze[i][j].up = (j > 0 && i !== 0 && i !== width + 1);
-      maze[i][j].reachable = (i === 0 || i === width + 1 || j === 0 || j === height + 1);
-    }
-  }
-  mouse_i = 1;
-  mouse_j = 1;
-  goal_i = width;
-  goal_j = height;
+    <div>
+      <label>Width: <input id="width" type="number" value="64"></label>
+      <label>Height: <input id="height" type="number" value="48"></label>
+      <label>Scale: <input id="scale" type="number" value="16"></label>
+      <input id="create" type="button" value="Create">
+    </div>
 
-  subMakeMaze(mouse_i, mouse_j);
+    <hr>
 
-  maze[goal_i + 1][goal_j].left = false;
+    <div id="maze"></div>
 
-  document.getElementById("maze").innerHTML = "";
-  for (var i = 1; i <= width + 1; i++) {
-    for (var j = 1; j <= height + 1; j++) {
-      if (maze[i][j].left)
-        makeDiv((i - 1) * cellSize, (j - 1) * cellSize, wallWidth, cellSize + wallWidth, "black", "");
-      if (maze[i][j].up)
-        makeDiv((i - 1) * cellSize, (j - 1) * cellSize, cellSize + wallWidth, wallWidth, "black", "");
-    }
-  }
+    <script src="maze.js"></script>
 
-  mouse = document.createElement("div");
-  mouse.style.position = "absolute";
-  mouse.style.left = ((mouse_i - 1) * cellSize + (cellSize - mouseSize + wallWidth) / 2) +"px";
-  mouse.style.top = ((mouse_j - 1) * cellSize + (cellSize - mouseSize + wallWidth) / 2) +"px";
-  mouse.style.width = mouseSize +"px";
-  mouse.style.height = mouseSize +"px";
-  mouse.style.background = "gray";
-  document.getElementById("maze").appendChild(mouse);
-}
-
-function subMakeMaze(i, j) {
-  maze[i][j].reachable = true;
-  while (!(maze[i - 1][j].reachable && maze[i][j - 1].reachable && maze[i + 1][j].reachable && maze[i][j + 1].reachable)) {
-    switch (Math.floor(Math.random() * 4)) {
-      case 0:
-        if (!maze[i - 1][j].reachable && maze[i][j].left) {
-          maze[i][j].left = false;
-          subMakeMaze(i - 1, j);
-        }
-        break;
-      case 1:
-        if (!maze[i][j - 1].reachable && maze[i][j].up) {
-          maze[i][j].up = false;
-          subMakeMaze(i, j - 1);
-        }
-        break;
-      case 2:
-        if (!maze[i + 1][j].reachable && maze[i + 1][j].left) {
-          maze[i + 1][j].left = false;
-          subMakeMaze(i + 1, j);
-        }
-        break;
-      case 3:
-        if (!maze[i][j + 1].reachable && maze[i][j + 1].left) {
-          maze[i][j + 1].up = false;
-          subMakeMaze(i, j + 1);
-        }
-        break;
-    }
-  }
-}
-
-function makeDiv(x, y, w, h, color, text) {
-  var div = document.createElement("div");
-  div.style.position = "absolute";
-  div.style.left = x +"px";
-  div.style.top = y +"px";
-  div.style.width = w +"px";
-  div.style.height = h +"px";
-  div.style.background = color;
-  div.innerHTML = text;
-  document.getElementById("maze").appendChild(div);
-}
-
-function keyEventHandler(event) {
-  switch (event.keyCode) {
-    case 37:
-      if (!maze[mouse_i][mouse_j].left) {
-        mouse_i--;
-        mouse.style.left = ((mouse_i - 1) * cellSize + (cellSize - mouseSize + wallWidth) / 2) +"px";
-      }
-      break;
-    case 38:
-      if (!maze[mouse_i][mouse_j].up) {
-        mouse_j--;
-        mouse.style.top = ((mouse_j - 1) * cellSize + (cellSize - mouseSize + wallWidth) / 2) +"px";
-      }
-      break;
-    case 39:
-      if (!maze[mouse_i + 1][mouse_j].left) {
-        mouse_i++;
-        mouse.style.left = ((mouse_i - 1) * cellSize + (cellSize - mouseSize + wallWidth) / 2) +"px";
-        if (mouse_i === width + 1)
-          clear();
-      }
-      break;
-    case 40:
-      if (!maze[mouse_i][mouse_j + 1].up) {
-        mouse_j++;
-        mouse.style.top = ((mouse_j - 1) * cellSize + (cellSize - mouseSize + wallWidth) / 2) +"px";
-      }
-      break;
-  }
-}
-
-function clear() {
-  alert("Clear!");
-  mouse_i = 1;
-  mouse_j = 1;
-  mouse.style.left = ((mouse_i - 1) * cellSize + (cellSize - mouseSize + wallWidth) / 2) +"px";
-  mouse.style.top = ((mouse_j - 1) * cellSize + (cellSize - mouseSize + wallWidth) / 2) +"px";
-}
-
-</script>
-</head>
-<body onload="makeMaze()" onkeydown="keyEventHandler(event)">
-
-<h1>Maze</h1>
-
-<form>
-  <label>Width: <input type="text" id="width" value="100" size="3"/></label>
-  <label>Height: <input type="text" id="height" value="50" size="3"/></label>
-  <input type="button" value="Start" onclick="makeMaze()"/><br/>
-  <table>
-    <tr>
-      <td></td>
-      <td align="center"><input type="button" value="up" onclick="keyEventHandler({keyCode: 38})"/></td>
-      <td></td>
-    </tr>
-    <tr>
-      <td align="center"><input type="button" value="left" onclick="keyEventHandler({keyCode: 37})"/></td>
-      <td></td>
-      <td align="center"><input type="button" value="right" onclick="keyEventHandler({keyCode: 39})"/></td>
-    </tr>
-    <tr>
-      <td></td>
-      <td align="center"><input type="button" value="down" onclick="keyEventHandler({keyCode: 40})"/></td>
-      <td></td>
-    </tr>
-  </table>
-</form>
-
-<p></p>
-
-<div id="maze" style="position: absolute"></div>
-
-</body>
+  </body>
 </html>
